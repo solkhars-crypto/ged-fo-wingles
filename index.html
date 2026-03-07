@@ -673,6 +673,78 @@ header {
   margin-top: 24px;
 }
 
+
+/* ── DOCUMENT VIEWER ── */
+.viewer-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.92);
+  backdrop-filter: blur(12px);
+  z-index: 2000;
+  flex-direction: column;
+}
+.viewer-overlay.open { display: flex; }
+
+.viewer-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+  background: rgba(13,27,42,0.95);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+}
+
+.viewer-title {
+  flex: 1;
+}
+.viewer-title strong {
+  font-family: "Bebas Neue", cursive;
+  font-size: 18px;
+  letter-spacing: 2px;
+  color: white;
+  display: block;
+}
+.viewer-title span {
+  font-size: 11px;
+  color: var(--grey);
+  font-family: "JetBrains Mono", monospace;
+}
+
+.viewer-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+}
+
+.viewer-body iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 8px;
+  background: white;
+}
+
+.viewer-body img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+.viewer-no-preview {
+  text-align: center;
+  color: var(--grey);
+}
+.viewer-no-preview .icon { font-size: 64px; margin-bottom: 16px; }
+.viewer-no-preview p { font-size: 14px; margin-bottom: 20px; }
+
 /* ── TOAST ── */
 .toast-container {
   position: fixed;
@@ -1055,6 +1127,24 @@ header {
   </div>
 </div>
 
+<!-- DOCUMENT VIEWER -->
+<div class="viewer-overlay" id="docViewer">
+  <div class="viewer-header">
+    <div class="fo-badge" style="width:36px;height:36px;font-size:14px">FO</div>
+    <div class="viewer-title">
+      <strong id="viewerTitle">Document</strong>
+      <span id="viewerCode">—</span>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost" id="viewerDownload" onclick="">↓ Télécharger</button>
+      <button class="btn btn-ghost" onclick="closeViewer()">✕ Fermer</button>
+    </div>
+  </div>
+  <div class="viewer-body" id="viewerBody">
+    <!-- content injected by JS -->
+  </div>
+</div>
+
 <!-- TOAST CONTAINER -->
 <div class="toast-container" id="toastContainer"></div>
 
@@ -1246,6 +1336,7 @@ function renderDocRows(instId, filter, search='') {
       <div><span class="doc-badge ${t.badge}">${t.label}</span></div>
       <div class="doc-date">${formatDate(doc.date)}</div>
       <div class="doc-actions">
+        <button class="icon-btn" title="Visualiser" onclick="viewDoc('${doc.id}')" style="color:#fbbf24">👁</button>
         ${doc.driveId ? `<button class="icon-btn drive" title="Voir sur Drive" onclick="openDrive('${doc.driveId}')">☁</button>` : ''}
         <button class="icon-btn" title="Télécharger" onclick="downloadDoc('${doc.id}')">↓</button>
         <button class="icon-btn drive" title="Sauvegarder sur Drive" onclick="saveToDrive('${doc.id}')">▲</button>
@@ -1326,6 +1417,75 @@ function deleteDoc(docId, instId, filter) {
   renderDocRows(instId, filter);
   buildDashboardCards();
   toast('Document supprimé', 'info');
+}
+
+function viewDoc(docId) {
+  const doc = store.find(d => d.id === docId);
+  if (!doc) return;
+
+  document.getElementById("viewerTitle").textContent = doc.title;
+  document.getElementById("viewerCode").textContent = genCode(doc) + " · " + formatDate(doc.date);
+
+  const body = document.getElementById("viewerBody");
+  body.innerHTML = "";
+
+  document.getElementById("viewerDownload").onclick = () => downloadDoc(docId);
+
+  if (doc.fileData) {
+    const mime = doc.fileData.split(";")[0].split(":")[1] || "";
+
+    if (mime === "application/pdf") {
+      const iframe = document.createElement("iframe");
+      iframe.src = doc.fileData;
+      iframe.style.width = "100%";
+      iframe.style.height = "100%";
+      iframe.style.border = "none";
+      iframe.style.borderRadius = "8px";
+      body.appendChild(iframe);
+
+    } else if (mime.startsWith("image/")) {
+      const img = document.createElement("img");
+      img.src = doc.fileData;
+      body.appendChild(img);
+
+    } else if (mime === "text/plain") {
+      fetch(doc.fileData)
+        .then(r => r.text())
+        .then(text => {
+          body.innerHTML = `<div style="background:rgba(0,0,0,0.4);border-radius:12px;padding:32px;max-width:800px;width:100%;max-height:80vh;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:13px;color:#e2e8f0;white-space:pre-wrap;line-height:1.7">${text.replace(/</g,'&lt;')}</div>`;
+        });
+
+    } else {
+      // Word, Excel — show download prompt
+      body.innerHTML = `<div class="viewer-no-preview">
+        <div class="icon">📄</div>
+        <p style="color:white;font-size:16px;margin-bottom:8px">${doc.fileName || doc.title}</p>
+        <p>Ce type de fichier ne peut pas être prévisualisé directement.<br>Téléchargez-le pour l'ouvrir.</p>
+        <button class="btn btn-primary" onclick="downloadDoc('${docId}')">↓ Télécharger le fichier</button>
+      </div>`;
+    }
+  } else if (doc.driveId) {
+    const iframe = document.createElement("iframe");
+    iframe.src = `https://drive.google.com/file/d/${doc.driveId}/preview`;
+    iframe.style.width = "100%";
+    iframe.style.height = "100%";
+    iframe.style.border = "none";
+    iframe.style.borderRadius = "8px";
+    body.appendChild(iframe);
+  } else {
+    body.innerHTML = `<div class="viewer-no-preview">
+      <div class="icon">📋</div>
+      <p style="color:white;font-size:16px;margin-bottom:8px">${doc.title}</p>
+      <p>Aucun fichier attaché à ce document.<br>Ajoutez un fichier en modifiant le document.</p>
+    </div>`;
+  }
+
+  document.getElementById("docViewer").classList.add("open");
+}
+
+function closeViewer() {
+  document.getElementById("docViewer").classList.remove("open");
+  document.getElementById("viewerBody").innerHTML = "";
 }
 
 function downloadDoc(docId) {
@@ -1660,11 +1820,44 @@ document.getElementById('newDocModal').addEventListener('click', function(e) {
 
 // Keyboard shortcuts
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+  if (e.key === 'Escape') { document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open')); closeViewer(); }
 });
 
 // INIT
 init();
+
+// Auto-reconnexion Drive au démarrage
+if (gClientId) {
+  setTimeout(() => {
+    if (document.getElementById("gapi-script")) return;
+    const s = document.createElement("script");
+    s.id = "gapi-script";
+    s.src = "https://apis.google.com/js/api.js";
+    s.onload = () => {
+      gapi.load("client:auth2", () => {
+        gapi.client.init({
+          clientId: gClientId,
+          scope: "https://www.googleapis.com/auth/drive.file",
+          discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"]
+        }).then(() => {
+          if (gapi.auth2.getAuthInstance().isSignedIn.get()) {
+            setDriveConnected();
+          } else {
+            gapi.auth2.getAuthInstance().signIn({ prompt: "none" })
+              .then(() => setDriveConnected())
+              .catch(() => {
+                const btn = document.getElementById("driveBtn");
+                btn.className = "gdrive-btn connect";
+                btn.innerHTML = "🔄 Reconnecter Drive";
+                btn.onclick = () => gapi.auth2.getAuthInstance().signIn().then(() => setDriveConnected()).catch(e => toast("Erreur: " + e.error, "error"));
+              });
+          }
+        }).catch(err => console.log("Drive init:", err));
+      });
+    };
+    document.body.appendChild(s);
+  }, 800);
+}
 </script>
 </body>
 </html>
