@@ -302,39 +302,8 @@ main{padding:28px 36px;overflow-y:auto}
 
   <!-- MAIN -->
   <main>
-    <!-- SETUP (shown when not connected) -->
-    <div id="setupScreen" class="setup-screen" style="display:none">
-      <div class="setup-box">
-        <div class="fo-big">FO</div>
-        <h2>CONFIGURATION DRIVE</h2>
-        <p>Pour synchroniser vos documents sur tous vos appareils, connectez votre Google Drive. Vos données seront accessibles partout — PC, téléphone, tablette.</p>
-        <div class="setup-step">
-          <div class="setup-num">1</div>
-          <div class="setup-step-txt">
-            <strong>Créer un projet Google Cloud</strong>
-            <p>Allez sur <code>console.cloud.google.com</code> → Activez <code>Google Drive API</code></p>
-          </div>
-        </div>
-        <div class="setup-step">
-          <div class="setup-num">2</div>
-          <div class="setup-step-txt">
-            <strong>Créer des identifiants OAuth</strong>
-            <p>APIs et services → Identifiants → ID client OAuth → Application Web<br>Origine autorisée : <code>https://solkhars-crypto.github.io</code></p>
-          </div>
-        </div>
-        <div class="setup-step">
-          <div class="setup-num">3</div>
-          <div class="setup-step-txt">
-            <strong>Coller votre Client ID ci-dessous</strong>
-            <p>Vous n'aurez à faire ça qu'une seule fois.</p>
-          </div>
-        </div>
-        <div class="setup-input-wrap">
-          <input class="setup-input" type="text" id="setupClientId" placeholder="321352148658-xxxx.apps.googleusercontent.com">
-          <button class="btn btn-red" onclick="saveAndConnect()">Connecter →</button>
-        </div>
-      </div>
-    </div>
+    <!-- SETUP SCREEN (full page, shown only when no clientId ever set) -->
+    <div id="setupScreen" style="display:none"></div>
 
     <!-- DASHBOARD -->
     <div class="panel" id="panel-dashboard">
@@ -536,21 +505,25 @@ function init() {
   document.getElementById('dDate').valueAsDate = new Date();
   document.getElementById('mDate').valueAsDate = new Date();
 
+  // Toujours afficher l'appli immédiatement avec les données locales
+  docs     = JSON.parse(localStorage.getItem('fo_docs')     || '[]');
+  meetings = JSON.parse(localStorage.getItem('fo_meetings') || '[]');
+  showApp();
+
   if (!gClientId) {
-    showSetup();
+    setTimeout(() => setSyncStatus('offline', 'Cliquer pour configurer Drive'), 500);
   } else {
-    showApp();
     startGIS();
   }
 }
 
 function showSetup() {
   document.getElementById('setupScreen').style.display = 'flex';
-  document.getElementById('panel-dashboard').style.display = 'none';
 }
 
 function showApp() {
   document.getElementById('setupScreen').style.display = 'none';
+  renderAll();
   go('dashboard');
 }
 
@@ -559,7 +532,7 @@ function saveAndConnect() {
   if (!v) { toast('Client ID requis', 'e'); return; }
   gClientId = v;
   localStorage.setItem('fo_cid', v);
-  showApp();
+  closeModal('setupModal');
   startGIS();
 }
 
@@ -626,7 +599,7 @@ function handleSyncBtn() {
   } else if (gClientId) {
     requestNewToken(true);
   } else {
-    showSetup();
+    openModal('setupModal');
   }
 }
 
@@ -1217,4 +1190,62 @@ function renderDocRows(instId, filter, search='') {
 
 function updateNavCounts() {
   INSTANCES.forEach(inst => {
-    const el = document.getElementById(
+    const el = document.getElementById('cnt-' + inst.id);
+    if (el) el.textContent = docs.filter(d => d.instance === inst.id).length;
+  });
+}
+
+// ═══════════════════════════════════════════
+// BUILD UI
+// ═══════════════════════════════════════════
+function buildSidebar() {
+  const cats = [
+    { label:'Instances Entreprise', ids:['cse','cssct','formation','eco','egalite','logement','marches'] },
+    { label:'Instances Centrales',  ids:['csec','cssctc'] },
+    { label:'Négociations',         ids:['nao','negociation'] },
+    { label:'Section Syndicale',    ids:['fo'] },
+  ];
+  document.getElementById('sidebarInstances').innerHTML = cats.map(cat => `
+    <div class="nav-section">
+      <div class="nav-label">${cat.label}</div>
+      ${cat.ids.map(id => {
+        const inst = INSTANCES.find(i => i.id === id);
+        return `<div class="nav-item" onclick="go('${id}')" data-p="${id}" style="--ac:${inst.color}">
+          <div class="nav-dot" style="background:${inst.color}"></div>
+          <span class="nav-txt">${inst.label}</span>
+          <span class="nav-cnt" id="cnt-${id}">0</span>
+        </div>`;
+      }).join('')}
+    </div>`).join('');
+}
+
+function buildInstPanels() {
+  document.getElementById('instPanels').innerHTML = INSTANCES.map(inst => `
+    <div class="panel" id="panel-${inst.id}" style="--ic:${inst.color}">
+      <div class="inst-header" style="--ic:${inst.color}">
+        <div class="inst-icon" style="background:${inst.color}">${inst.label.substring(0,4)}</div>
+        <div class="inst-info">
+          <h3>${inst.label}</h3>
+          <p>${inst.sub} · 2025–2026</p>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="btn btn-ghost" onclick="openModal('newDocModal');document.getElementById('dInstance').value='${inst.id}'">＋ Ajouter</button>
+        </div>
+      </div>
+
+      <div class="doc-tabs" id="tabs-${inst.id}">
+        <button class="dtab active" onclick="filterTab('${inst.id}','all',this)" style="--ic:${inst.color}">Tous</button>
+        <button class="dtab" onclick="filterTab('${inst.id}','ref',this)"   style="--ic:${inst.color}">📋 Référence</button>
+        <button class="dtab" onclick="filterTab('${inst.id}','conv',this)"  style="--ic:${inst.color}">📩 Convocations</button>
+        <button class="dtab" onclick="filterTab('${inst.id}','oj',this)"    style="--ic:${inst.color}">📄 OJ</button>
+        <button class="dtab" onclick="filterTab('${inst.id}','pv',this)"    style="--ic:${inst.color}">📝 PV</button>
+        <button class="dtab" onclick="filterTab('${inst.id}','dir',this)"   style="--ic:${inst.color}">🏢 Direction</button>
+        <button class="dtab" onclick="filterTab('${inst.id}','fo',this)"    style="--ic:${inst.color}">✊ FO</button>
+        <button class="dtab" onclick="filterTab('${inst.id}','suivi',this)" style="--ic:${inst.color}">📊 Suivi</button>
+        <button class="dtab" onclick="filterTab('${inst.id}','div',this)"   style="--ic:${inst.color}">📎 Divers</button>
+      </div>
+
+      <div class="toolbar">
+        <div class="sbox"><span style="color:var(--grey-d)">🔍</span><input type="text" placeholder="Rechercher..." oninput="renderDocRows('${inst.id}',curFilter['${inst.id}']||'all',this.value)"></div>
+        <button class="btn btn-ghost" onclick="sortInst('${inst.id}')">↕ Date</button>
+      <
