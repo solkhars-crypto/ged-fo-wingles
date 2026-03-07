@@ -1248,4 +1248,6 @@ function buildInstPanels() {
 
       <div class="doc-tabs" id="tabs-${inst.id}">
         <button class="dtab active" onclick="filterTab('${inst.id}','all',this)" style="--ic:${inst.color}">Tous</button>
-        <button class="dtab" onclick="filterTab('${inst.id}','ref',this)"   style="--ic:${inst.co
+        <button class="dtab" onclick="filterTab('${inst.id}','ref',this)"   style="--ic:${inst.color}">📋 Référence</button>
+        <button class="dtab" onclick="filterTab('${inst.id}','conv',this)"  style="--ic:${inst.color}">📩 Convocations</button>
+        <button class="dtab" onclick="filterTab('${inst.id}','oj',this)"    style="--ic:${inst.c
