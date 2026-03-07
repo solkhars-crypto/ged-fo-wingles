@@ -891,7 +891,7 @@ header {
     </div>
   </div>
   <div class="header-right">
-    <button class="gdrive-btn connect" id="driveBtn" onclick="toggleDriveConfig()">
+    <button class="gdrive-btn connect" id="driveBtn" onclick="handleDriveBtn()">
       <svg width="16" height="16" viewBox="0 0 87.3 78" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3L27.5 53H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
         <path d="M43.65 25L29.9 0c-1.35.8-2.5 1.9-3.3 3.3L1.2 48.5A9 9 0 000 53h27.5z" fill="#00ac47"/>
@@ -1616,6 +1616,19 @@ function sortDocs(instId) {
 // ─────────────────────────────────────────────
 // GOOGLE DRIVE INTEGRATION
 // ─────────────────────────────────────────────
+function handleDriveBtn() {
+  if (driveConnected) {
+    toggleDriveConfig();
+    return;
+  }
+  if (!gClientId) {
+    toggleDriveConfig();
+    return;
+  }
+  // Client ID exists — connect directly without showing config panel
+  loadGapiAndConnect(true);
+}
+
 function toggleDriveConfig() {
   const panel = document.getElementById('driveConfig');
   panel.classList.toggle('visible');
