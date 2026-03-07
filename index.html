@@ -1455,12 +1455,45 @@ function viewDoc(docId) {
           body.innerHTML = `<div style="background:rgba(0,0,0,0.4);border-radius:12px;padding:32px;max-width:800px;width:100%;max-height:80vh;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:13px;color:#e2e8f0;white-space:pre-wrap;line-height:1.7">${text.replace(/</g,'&lt;')}</div>`;
         });
 
+    } else if (mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+               mime === "application/msword" ||
+               mime === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+               mime === "application/vnd.ms-excel" ||
+               mime === "application/vnd.openxmlformats-officedocument.presentationml.presentation") {
+
+      // Upload temp to Drive then open with Office Online viewer
+      if (doc.driveId) {
+        // Already on Drive — open directly with Office Online
+        const ext = (doc.fileName || "").split(".").pop().toLowerCase();
+        const isExcel = ["xlsx","xls","csv"].includes(ext);
+        const officeUrl = isExcel
+          ? `https://view.officeapps.live.com/op/embed.aspx?src=https://drive.google.com/uc?id=${doc.driveId}`
+          : `https://view.officeapps.live.com/op/embed.aspx?src=https://drive.google.com/uc?id=${doc.driveId}`;
+        const iframe = document.createElement("iframe");
+        iframe.src = officeUrl;
+        iframe.style.width = "100%";
+        iframe.style.height = "100%";
+        iframe.style.border = "none";
+        iframe.style.borderRadius = "8px";
+        iframe.style.background = "white";
+        body.appendChild(iframe);
+      } else {
+        // Not on Drive yet — convert base64 to blob URL and open Office Online via upload
+        body.innerHTML = `<div class="viewer-no-preview">
+          <div class="icon">${mime.includes("sheet") || mime.includes("excel") ? "📊" : "📝"}</div>
+          <p style="color:white;font-size:16px;margin-bottom:8px">${doc.fileName || doc.title}</p>
+          <p style="margin-bottom:20px">Pour visualiser ce fichier, sauvegardez-le d'abord sur Google Drive.</p>
+          <div style="display:flex;gap:12px;justify-content:center">
+            <button class="btn btn-primary" onclick="saveToDrive('${docId}').then(() => { closeViewer(); setTimeout(() => viewDoc('${docId}'), 1500); })">☁️ Sauvegarder sur Drive et visualiser</button>
+            <button class="btn btn-ghost" onclick="downloadDoc('${docId}')">↓ Télécharger</button>
+          </div>
+        </div>`;
+      }
     } else {
-      // Word, Excel — show download prompt
       body.innerHTML = `<div class="viewer-no-preview">
         <div class="icon">📄</div>
         <p style="color:white;font-size:16px;margin-bottom:8px">${doc.fileName || doc.title}</p>
-        <p>Ce type de fichier ne peut pas être prévisualisé directement.<br>Téléchargez-le pour l'ouvrir.</p>
+        <p>Format non reconnu.<br>Téléchargez-le pour l'ouvrir.</p>
         <button class="btn btn-primary" onclick="downloadDoc('${docId}')">↓ Télécharger le fichier</button>
       </div>`;
     }
