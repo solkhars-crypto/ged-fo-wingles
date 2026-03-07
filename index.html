@@ -1616,17 +1616,14 @@ function sortDocs(instId) {
 // ─────────────────────────────────────────────
 // GOOGLE DRIVE INTEGRATION
 // ─────────────────────────────────────────────
+// ── GOOGLE IDENTITY SERVICES (nouvelle API 2023) ──
+let gisTokenClient = null;
+let accessToken = null;
+
 function handleDriveBtn() {
-  if (driveConnected) {
-    toggleDriveConfig();
-    return;
-  }
-  if (!gClientId) {
-    toggleDriveConfig();
-    return;
-  }
-  // Client ID exists — connect directly without showing config panel
-  loadGapiAndConnect(true);
+  if (driveConnected) { toggleDriveConfig(); return; }
+  if (!gClientId) { toggleDriveConfig(); return; }
+  startGoogleAuth();
 }
 
 function toggleDriveConfig() {
@@ -1638,48 +1635,49 @@ function saveDriveConfig() {
   gClientId = document.getElementById('clientIdInput').value.trim();
   if (!gClientId) { toast('Client ID requis', 'error'); return; }
   localStorage.setItem('fo_ged_clientid', gClientId);
-  loadGapiAndConnect(true);
+  startGoogleAuth();
 }
 
-function loadGapiAndConnect(forceSignIn) {
+function startGoogleAuth() {
   if (!gClientId) return;
-  if (window.gapi && gapi.auth2) {
-    connectDrive(forceSignIn);
-    return;
+  // Load GIS script if not loaded
+  if (!window.google || !google.accounts) {
+    if (document.getElementById('gis-script')) return;
+    const s = document.createElement('script');
+    s.id = 'gis-script';
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.onload = () => initTokenClient();
+    document.body.appendChild(s);
+  } else {
+    initTokenClient();
   }
-  if (document.getElementById('gapi-script')) return;
-  const s = document.createElement('script');
-  s.id = 'gapi-script';
-  s.src = 'https://apis.google.com/js/api.js';
-  s.onload = () => gapi.load('client:auth2', () => connectDrive(forceSignIn));
-  document.body.appendChild(s);
 }
 
-function connectDrive(forceSignIn) {
-  gapi.client.init({
-    clientId: gClientId,
+function initTokenClient() {
+  gisTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: gClientId,
     scope: 'https://www.googleapis.com/auth/drive.file',
-    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
-  }).then(() => {
-    const auth = gapi.auth2.getAuthInstance();
-    if (auth.isSignedIn.get()) {
+    callback: (response) => {
+      if (response.error) {
+        toast('Erreur connexion Drive : ' + response.error, 'error');
+        return;
+      }
+      accessToken = response.access_token;
+      // Store expiry
+      localStorage.setItem('fo_drive_token', accessToken);
+      localStorage.setItem('fo_drive_token_expiry', Date.now() + (response.expires_in * 1000));
       setDriveConnected();
-    } else if (forceSignIn) {
-      auth.signIn().then(() => setDriveConnected()).catch(e => toast('Connexion annulée', 'error'));
-    } else {
-      // Try silent sign-in
-      auth.signIn({ prompt: 'none' }).then(() => setDriveConnected()).catch(() => {
-        // Silent failed — show reconnect button
-        const btn = document.getElementById('driveBtn');
-        btn.className = 'gdrive-btn connect';
-        btn.innerHTML = '🔄 Reconnecter Drive';
-        btn.onclick = () => connectDrive(true);
-      });
     }
-  }).catch(err => {
-    console.log('Drive error:', err);
-    if (forceSignIn) toast('Erreur Drive : ' + (err.error || err), 'error');
   });
+  // Check if we have a valid cached token
+  const cached = localStorage.getItem('fo_drive_token');
+  const expiry = parseInt(localStorage.getItem('fo_drive_token_expiry') || '0');
+  if (cached && Date.now() < expiry - 60000) {
+    accessToken = cached;
+    setDriveConnected();
+  } else {
+    gisTokenClient.requestAccessToken({ prompt: 'consent' });
+  }
 }
 
 function setDriveConnected() {
@@ -1689,20 +1687,13 @@ function setDriveConnected() {
   btn.innerHTML = '<div class="status-dot"></div> Drive connecté';
   btn.onclick = toggleDriveConfig;
   document.getElementById('driveConfig').classList.remove('visible');
-  // Listen for sign-out
-  gapi.auth2.getAuthInstance().isSignedIn.listen(isSignedIn => {
-    if (!isSignedIn) {
-      driveConnected = false;
-      const b = document.getElementById('driveBtn');
-      b.className = 'gdrive-btn connect';
-      b.innerHTML = '🔄 Reconnecter Drive';
-      b.onclick = () => connectDrive(true);
-      toast('Drive déconnecté', 'error');
-    }
-  });
   toast('Google Drive connecté !', 'success');
   buildInstancePanels();
   INSTANCES.forEach(inst => renderDocRows(inst.id, 'all'));
+}
+
+function getAccessToken() {
+  return accessToken;
 }
 
 async function saveToDrive(docId) {
@@ -1747,7 +1738,7 @@ async function saveToDrive(docId) {
 
     const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
       method: 'POST',
-      headers: { Authorization: 'Bearer ' + gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().access_token },
+      headers: { Authorization: 'Bearer ' + getAccessToken() },
       body: form
     });
 
@@ -1766,7 +1757,7 @@ async function saveToDrive(docId) {
 }
 
 async function ensureDriveFolder(path) {
-  const token = gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().access_token;
+  const token = getAccessToken();
   const parts = path.split('/');
   let parentId = 'root';
 
@@ -1897,7 +1888,7 @@ init();
 
 // Auto-reconnexion Drive au démarrage
 if (gClientId) {
-  setTimeout(() => loadGapiAndConnect(false), 800);
+  setTimeout(() => startGoogleAuth(), 800);
 }
 </script>
 </body>
