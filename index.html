@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GED Force Ouvrière — O-I Wingles</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -267,7 +270,7 @@ main{padding:28px 36px;overflow-y:auto}
   <div class="logo">FO</div>
   <div class="header-info">
     <h1>GED · FORCE OUVRIÈRE</h1>
-    <p>O-I Manufacturing France SAS — Wingles · 2025–2026</p>
+    <p>O-I Manufacturing France SAS — Wingles · 2025–2026 <span style="background:rgba(212,175,55,.2);color:var(--gold);font-size:9px;padding:1px 6px;border-radius:4px;margin-left:6px">v3.0</span></p>
   </div>
   <div class="header-right">
     <div class="sync-status offline" id="syncBtn" onclick="handleSyncBtn()">
@@ -452,6 +455,14 @@ main{padding:28px 36px;overflow-y:auto}
 <div class="toasts" id="toasts"></div>
 
 <script>
+window.onerror = function(msg, src, line) {
+  document.title = '⚠ ERREUR JS - ' + msg;
+  const d = document.createElement('div');
+  d.style = 'position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#C00000;color:#fff;padding:14px 22px;border-radius:10px;z-index:9999;font-family:monospace;font-size:12px;max-width:90vw;word-break:break-all';
+  d.textContent = '⚠ JS Error ligne ' + line + ': ' + msg;
+  document.body.appendChild(d);
+};
+
 // ═══════════════════════════════════════════
 // CONFIG
 // ═══════════════════════════════════════════
@@ -506,8 +517,10 @@ function init() {
   document.getElementById('mDate').valueAsDate = new Date();
 
   // Toujours afficher l'appli immédiatement avec les données locales
-  docs     = JSON.parse(localStorage.getItem('fo_docs')     || '[]');
-  meetings = JSON.parse(localStorage.getItem('fo_meetings') || '[]');
+  try {
+    docs     = JSON.parse(localStorage.getItem('fo_docs')     || '[]');
+    meetings = JSON.parse(localStorage.getItem('fo_meetings') || '[]');
+  } catch(e) { docs = []; meetings = []; }
   showApp();
 
   if (!gClientId) {
@@ -1235,17 +1248,4 @@ function buildInstPanels() {
 
       <div class="doc-tabs" id="tabs-${inst.id}">
         <button class="dtab active" onclick="filterTab('${inst.id}','all',this)" style="--ic:${inst.color}">Tous</button>
-        <button class="dtab" onclick="filterTab('${inst.id}','ref',this)"   style="--ic:${inst.color}">📋 Référence</button>
-        <button class="dtab" onclick="filterTab('${inst.id}','conv',this)"  style="--ic:${inst.color}">📩 Convocations</button>
-        <button class="dtab" onclick="filterTab('${inst.id}','oj',this)"    style="--ic:${inst.color}">📄 OJ</button>
-        <button class="dtab" onclick="filterTab('${inst.id}','pv',this)"    style="--ic:${inst.color}">📝 PV</button>
-        <button class="dtab" onclick="filterTab('${inst.id}','dir',this)"   style="--ic:${inst.color}">🏢 Direction</button>
-        <button class="dtab" onclick="filterTab('${inst.id}','fo',this)"    style="--ic:${inst.color}">✊ FO</button>
-        <button class="dtab" onclick="filterTab('${inst.id}','suivi',this)" style="--ic:${inst.color}">📊 Suivi</button>
-        <button class="dtab" onclick="filterTab('${inst.id}','div',this)"   style="--ic:${inst.color}">📎 Divers</button>
-      </div>
-
-      <div class="toolbar">
-        <div class="sbox"><span style="color:var(--grey-d)">🔍</span><input type="text" placeholder="Rechercher..." oninput="renderDocRows('${inst.id}',curFilter['${inst.id}']||'all',this.value)"></div>
-        <button class="btn btn-ghost" onclick="sortInst('${inst.id}')">↕ Date</button>
-      <
+        <button class="dtab" onclick="filterTab('${inst.id}','ref',this)"   style="--ic:${inst.co
