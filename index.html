@@ -1619,42 +1619,54 @@ function sortDocs(instId) {
 function toggleDriveConfig() {
   const panel = document.getElementById('driveConfig');
   panel.classList.toggle('visible');
-  if (gClientId) initGoogleDrive();
 }
 
 function saveDriveConfig() {
   gClientId = document.getElementById('clientIdInput').value.trim();
   if (!gClientId) { toast('Client ID requis', 'error'); return; }
   localStorage.setItem('fo_ged_clientid', gClientId);
-  initGoogleDrive();
+  loadGapiAndConnect(true);
 }
 
-function initGoogleDrive() {
+function loadGapiAndConnect(forceSignIn) {
   if (!gClientId) return;
-  // Load Google APIs
-  if (!document.getElementById('gapi-script')) {
-    const s = document.createElement('script');
-    s.id = 'gapi-script';
-    s.src = 'https://apis.google.com/js/api.js';
-    s.onload = () => {
-      gapi.load('client:auth2', () => {
-        gapi.client.init({
-          clientId: gClientId,
-          scope: 'https://www.googleapis.com/auth/drive.file',
-          discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
-        }).then(() => {
-          if (gapi.auth2.getAuthInstance().isSignedIn.get()) {
-            setDriveConnected();
-          } else {
-            gapi.auth2.getAuthInstance().signIn().then(() => setDriveConnected());
-          }
-        }).catch(err => toast('Erreur Google Drive : ' + err.error, 'error'));
-      });
-    };
-    document.body.appendChild(s);
-  } else if (window.gapi) {
-    gapi.auth2.getAuthInstance().signIn().then(() => setDriveConnected()).catch(() => {});
+  if (window.gapi && gapi.auth2) {
+    connectDrive(forceSignIn);
+    return;
   }
+  if (document.getElementById('gapi-script')) return;
+  const s = document.createElement('script');
+  s.id = 'gapi-script';
+  s.src = 'https://apis.google.com/js/api.js';
+  s.onload = () => gapi.load('client:auth2', () => connectDrive(forceSignIn));
+  document.body.appendChild(s);
+}
+
+function connectDrive(forceSignIn) {
+  gapi.client.init({
+    clientId: gClientId,
+    scope: 'https://www.googleapis.com/auth/drive.file',
+    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
+  }).then(() => {
+    const auth = gapi.auth2.getAuthInstance();
+    if (auth.isSignedIn.get()) {
+      setDriveConnected();
+    } else if (forceSignIn) {
+      auth.signIn().then(() => setDriveConnected()).catch(e => toast('Connexion annulée', 'error'));
+    } else {
+      // Try silent sign-in
+      auth.signIn({ prompt: 'none' }).then(() => setDriveConnected()).catch(() => {
+        // Silent failed — show reconnect button
+        const btn = document.getElementById('driveBtn');
+        btn.className = 'gdrive-btn connect';
+        btn.innerHTML = '🔄 Reconnecter Drive';
+        btn.onclick = () => connectDrive(true);
+      });
+    }
+  }).catch(err => {
+    console.log('Drive error:', err);
+    if (forceSignIn) toast('Erreur Drive : ' + (err.error || err), 'error');
+  });
 }
 
 function setDriveConnected() {
@@ -1662,9 +1674,20 @@ function setDriveConnected() {
   const btn = document.getElementById('driveBtn');
   btn.className = 'gdrive-btn connected';
   btn.innerHTML = '<div class="status-dot"></div> Drive connecté';
+  btn.onclick = toggleDriveConfig;
   document.getElementById('driveConfig').classList.remove('visible');
+  // Listen for sign-out
+  gapi.auth2.getAuthInstance().isSignedIn.listen(isSignedIn => {
+    if (!isSignedIn) {
+      driveConnected = false;
+      const b = document.getElementById('driveBtn');
+      b.className = 'gdrive-btn connect';
+      b.innerHTML = '🔄 Reconnecter Drive';
+      b.onclick = () => connectDrive(true);
+      toast('Drive déconnecté', 'error');
+    }
+  });
   toast('Google Drive connecté !', 'success');
-  // Rebuild panels to show sync buttons
   buildInstancePanels();
   INSTANCES.forEach(inst => renderDocRows(inst.id, 'all'));
 }
@@ -1861,35 +1884,7 @@ init();
 
 // Auto-reconnexion Drive au démarrage
 if (gClientId) {
-  setTimeout(() => {
-    if (document.getElementById("gapi-script")) return;
-    const s = document.createElement("script");
-    s.id = "gapi-script";
-    s.src = "https://apis.google.com/js/api.js";
-    s.onload = () => {
-      gapi.load("client:auth2", () => {
-        gapi.client.init({
-          clientId: gClientId,
-          scope: "https://www.googleapis.com/auth/drive.file",
-          discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"]
-        }).then(() => {
-          if (gapi.auth2.getAuthInstance().isSignedIn.get()) {
-            setDriveConnected();
-          } else {
-            gapi.auth2.getAuthInstance().signIn({ prompt: "none" })
-              .then(() => setDriveConnected())
-              .catch(() => {
-                const btn = document.getElementById("driveBtn");
-                btn.className = "gdrive-btn connect";
-                btn.innerHTML = "🔄 Reconnecter Drive";
-                btn.onclick = () => gapi.auth2.getAuthInstance().signIn().then(() => setDriveConnected()).catch(e => toast("Erreur: " + e.error, "error"));
-              });
-          }
-        }).catch(err => console.log("Drive init:", err));
-      });
-    };
-    document.body.appendChild(s);
-  }, 800);
+  setTimeout(() => loadGapiAndConnect(false), 800);
 }
 </script>
 </body>
