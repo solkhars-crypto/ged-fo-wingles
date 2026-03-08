@@ -791,6 +791,51 @@ body {
 .pdf-loading { display:flex;flex-direction:column;align-items:center;gap:14px;color:var(--muted);font-size:13px;padding:60px; }
 
 /* ══════════════════════════════════════
+   AVIS CSE
+══════════════════════════════════════ */
+.avis-filters { display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px; }
+.avis-filter-btn {
+  background:rgba(255,255,255,.05);border:1px solid var(--border);
+  color:var(--muted);font-size:11.5px;font-weight:600;
+  padding:5px 14px;border-radius:20px;cursor:pointer;
+  transition:all .18s;font-family:var(--font-b);
+}
+.avis-filter-btn:hover { background:rgba(255,255,255,.09);color:var(--text); }
+.avis-filter-btn.active { background:var(--af,var(--red));border-color:transparent;color:#fff; }
+
+.avis-card {
+  background:var(--surface);border:1px solid var(--border);
+  border-left:4px solid var(--av-color,var(--red));
+  border-radius:12px;padding:18px 20px;margin-bottom:12px;
+  animation:fadeUp .25s ease both;
+}
+.avis-card-top { display:flex;align-items:flex-start;gap:14px;margin-bottom:10px; }
+.avis-badge {
+  padding:4px 12px;border-radius:20px;font-size:10px;font-weight:700;
+  letter-spacing:.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;
+  background:var(--av-color,var(--red));color:#fff;
+}
+.avis-type-badge {
+  padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;
+  background:rgba(255,255,255,.07);color:var(--muted);flex-shrink:0;
+}
+.avis-title { font-size:14px;font-weight:700;color:var(--text);flex:1;line-height:1.4; }
+.avis-date { font-size:11px;color:var(--muted);font-family:var(--font-m);white-space:nowrap; }
+.avis-vote { display:flex;gap:10px;margin:8px 0;flex-wrap:wrap; }
+.avis-vote-item { 
+  display:flex;align-items:center;gap:5px;
+  font-size:11px;font-family:var(--font-m);color:var(--muted);
+  background:rgba(255,255,255,.04);border:1px solid var(--border);
+  padding:3px 10px;border-radius:8px;
+}
+.avis-texte { 
+  font-size:12px;color:var(--muted);line-height:1.6;
+  border-top:1px solid var(--border);margin-top:10px;padding-top:10px;
+  white-space:pre-wrap;
+}
+.avis-acts { display:flex;gap:8px;margin-top:10px;justify-content:flex-end; }
+
+/* ══════════════════════════════════════
    LOADING & TOAST
 ══════════════════════════════════════ */
 .loading-ov { display:none;position:fixed;inset:0;background:rgba(13,15,20,.95);z-index:1000;flex-direction:column;align-items:center;justify-content:center;gap:16px; }
@@ -1081,6 +1126,29 @@ body {
     </div>
   </div>
 
+  <!-- PANEL AVIS CSE -->
+  <div class="panel" id="panel-avis">
+    <div class="section-head">
+      <div>
+        <div class="page-title">Avis <em>CSE</em></div>
+        <div class="page-sub">Rendus d'avis — CSE ordinaire &amp; extraordinaire</div>
+      </div>
+      <button class="btn btn-primary" onclick="openModal('avisModal')">＋ Nouvel avis</button>
+    </div>
+
+    <!-- Filtres -->
+    <div class="avis-filters" id="avisFilters">
+      <button class="avis-filter-btn active" onclick="filterAvis('all',this)">Tous</button>
+      <button class="avis-filter-btn" onclick="filterAvis('ordinaire',this)" style="--af:var(--blue)">CSE Ordinaire</button>
+      <button class="avis-filter-btn" onclick="filterAvis('extraordinaire',this)" style="--af:var(--red)">CSE Extraordinaire</button>
+      <button class="avis-filter-btn" onclick="filterAvis('favorable',this)" style="--af:#2ECC71">Favorable</button>
+      <button class="avis-filter-btn" onclick="filterAvis('defavorable',this)" style="--af:#E63946">Défavorable</button>
+      <button class="avis-filter-btn" onclick="filterAvis('reserve',this)" style="--af:#F4B942">Avec réserves</button>
+    </div>
+
+    <div id="avisList"></div>
+  </div>
+
   <!-- INSTANCE PANELS -->
   <div id="instPanels"></div>
 
@@ -1091,6 +1159,76 @@ body {
 <div class="loading-ov" id="loadingOv">
   <div class="spinner"></div>
   <p id="loadingMsg" style="color:var(--muted);font-size:13px;margin-top:4px">Chargement…</p>
+</div>
+
+<!-- MODAL AVIS CSE -->
+<div class="modal-ov" id="avisModal">
+  <div class="modal" style="max-width:600px">
+    <h3 id="avisModalTitle">Nouvel avis CSE</h3>
+    <input type="hidden" id="avis-edit-id">
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label>Objet / Titre de l'avis *</label>
+        <input type="text" id="avis-titre" placeholder="Ex: Avis sur le plan de formation 2026">
+      </div>
+      <div class="form-group" style="flex:1">
+        <label>Date de la réunion *</label>
+        <input type="date" id="avis-date">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Type de réunion</label>
+        <select id="avis-type">
+          <option value="ordinaire">CSE Ordinaire</option>
+          <option value="extraordinaire">CSE Extraordinaire</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Avis rendu</label>
+        <select id="avis-rendu">
+          <option value="favorable">✅ Favorable</option>
+          <option value="defavorable">❌ Défavorable</option>
+          <option value="reserve">⚠️ Favorable avec réserves</option>
+          <option value="ajourne">⏸ Ajourné</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:1;text-align:center">
+        <label>✅ Pour</label>
+        <input type="number" id="avis-pour" min="0" value="0" style="text-align:center">
+      </div>
+      <div class="form-group" style="flex:1;text-align:center">
+        <label>❌ Contre</label>
+        <input type="number" id="avis-contre" min="0" value="0" style="text-align:center">
+      </div>
+      <div class="form-group" style="flex:1;text-align:center">
+        <label>🟡 Abstention</label>
+        <input type="number" id="avis-abstention" min="0" value="0" style="text-align:center">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Texte de l'avis</label>
+      <textarea id="avis-texte" rows="4" placeholder="Rédigez ici le texte complet de l'avis rendu par le CSE…"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Fichier joint (PDF signé, Word…)</label>
+      <div class="ff-file-zone" id="avis-file-zone" onclick="document.getElementById('avis-file-input').click()">
+        <span class="ff-file-icon" id="avis-file-icon">📎</span>
+        <div>
+          <div class="ff-file-name" id="avis-file-name">Cliquez pour joindre l'avis officiel</div>
+          <div class="ff-file-sub" id="avis-file-sub">PDF, Word — max 10 Mo</div>
+        </div>
+        <button type="button" id="avis-file-clear" style="display:none;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px" onclick="event.stopPropagation();clearAvisFile()">×</button>
+        <input type="file" id="avis-file-input" style="display:none" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onchange="handleAvisFile(this)">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('avisModal');resetAvisForm()">Annuler</button>
+      <button class="btn btn-primary" onclick="saveAvis()">Enregistrer l'avis</button>
+    </div>
+  </div>
 </div>
 
 <!-- VIEWER -->
@@ -1308,6 +1446,190 @@ let DATA_FILE_ID = localStorage.getItem('fo_data_fid') || null;
 let calCurrent=new Date(), selDate=null, curFilter={};
 let ffSkillsTemp=[], ffCatFilter='all';
 
+// ─── AVIS CSE ────────────────────────────────────────────────────────────────
+let avis = [];
+let avisFilter = 'all';
+let avisFileTemp = null;
+
+const AVIS_RENDUS = {
+  favorable:    { label:'Favorable',            color:'#2ECC71', ico:'✅' },
+  defavorable:  { label:'Défavorable',           color:'#E63946', ico:'❌' },
+  reserve:      { label:'Favorable avec réserves', color:'#F4B942', ico:'⚠️' },
+  ajourne:      { label:'Ajourné',               color:'#6B7280', ico:'⏸' },
+};
+
+function filterAvis(f, btn){
+  avisFilter=f;
+  document.querySelectorAll('.avis-filter-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  renderAvis();
+}
+
+function renderAvis(){
+  const c=document.getElementById('avisList'); if(!c) return;
+  let list=[...avis];
+  if(avisFilter!=='all'){
+    if(['ordinaire','extraordinaire'].includes(avisFilter))
+      list=list.filter(a=>a.type===avisFilter);
+    else
+      list=list.filter(a=>a.rendu===avisFilter);
+  }
+  list.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  if(!list.length){
+    c.innerHTML=`<div style="color:var(--muted);text-align:center;padding:60px;font-size:13px">
+      Aucun avis enregistré${avisFilter!=='all'?' dans cette catégorie':''}<br>
+      <button class="btn btn-primary" style="margin-top:14px" onclick="openModal('avisModal')">＋ Nouvel avis</button>
+    </div>`;
+    return;
+  }
+  c.innerHTML=list.map((a,i)=>{
+    const r=AVIS_RENDUS[a.rendu]||AVIS_RENDUS.favorable;
+    const typeLabel=a.type==='extraordinaire'?'CSE Extraordinaire':'CSE Ordinaire';
+    const total=(a.pour||0)+(a.contre||0)+(a.abstention||0);
+    const voteHtml=total>0?`<div class="avis-vote">
+      <div class="avis-vote-item">✅ Pour : <strong style="color:#2ECC71">${a.pour||0}</strong></div>
+      <div class="avis-vote-item">❌ Contre : <strong style="color:#E63946">${a.contre||0}</strong></div>
+      <div class="avis-vote-item">🟡 Abstention : <strong style="color:#F4B942">${a.abstention||0}</strong></div>
+      <div class="avis-vote-item">Total : <strong>${total}</strong></div>
+    </div>`:'';
+    const texteHtml=a.texte?`<div class="avis-texte">${a.texte}</div>`:'';
+    const fileBtn=a.fileData?`<button class="ibtn view" title="Voir le fichier" onclick="viewAvisFile('${a.id}')">👁</button>`:'';
+    return `<div class="avis-card" style="--av-color:${r.color};animation-delay:${i*.05}s">
+      <div class="avis-card-top">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+            <span class="avis-badge">${r.ico} ${r.label}</span>
+            <span class="avis-type-badge">${typeLabel}</span>
+            <span class="avis-date">${fmtDate(a.date)}</span>
+          </div>
+          <div class="avis-title">${a.titre}</div>
+        </div>
+      </div>
+      ${voteHtml}
+      ${texteHtml}
+      <div class="avis-acts">
+        ${fileBtn}
+        <button class="ibtn" title="Modifier" onclick="editAvis('${a.id}')">✏</button>
+        <button class="ibtn del" title="Supprimer" onclick="deleteAvis('${a.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('cnt-avis').textContent=avis.length;
+}
+
+function updateAvisCount(){
+  const el=document.getElementById('cnt-avis');
+  if(el) el.textContent=avis.length;
+}
+
+function handleAvisFile(input){
+  const file=input.files[0]; if(!file) return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  const icons={pdf:'📄',docx:'📝',doc:'📝',jpg:'🖼️',jpeg:'🖼️',png:'🖼️'};
+  const reader=new FileReader();
+  reader.onload=e=>{
+    avisFileTemp={data:e.target.result,name:file.name,size:file.size,ext};
+    const zone=document.getElementById('avis-file-zone'); if(zone) zone.classList.add('has-file');
+    const nameEl=document.getElementById('avis-file-name'); if(nameEl) nameEl.textContent=file.name;
+    const subEl=document.getElementById('avis-file-sub'); if(subEl) subEl.textContent=`${(file.size/1024).toFixed(0)} Ko · ${ext.toUpperCase()}`;
+    const iconEl=document.getElementById('avis-file-icon'); if(iconEl) iconEl.textContent=icons[ext]||'📄';
+    const clr=document.getElementById('avis-file-clear'); if(clr) clr.style.display='';
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearAvisFile(){
+  avisFileTemp=null;
+  const zone=document.getElementById('avis-file-zone'); if(zone) zone.classList.remove('has-file');
+  const nameEl=document.getElementById('avis-file-name'); if(nameEl) nameEl.textContent='Cliquez pour joindre un fichier';
+  const subEl=document.getElementById('avis-file-sub'); if(subEl) subEl.textContent='PDF, Word — max 10 Mo';
+  const iconEl=document.getElementById('avis-file-icon'); if(iconEl) iconEl.textContent='📎';
+  const clr=document.getElementById('avis-file-clear'); if(clr) clr.style.display='none';
+  const inp=document.getElementById('avis-file-input'); if(inp) inp.value='';
+}
+
+function resetAvisForm(){
+  ['avis-edit-id','avis-titre','avis-texte'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('avis-date').valueAsDate=new Date();
+  document.getElementById('avis-type').value='ordinaire';
+  document.getElementById('avis-rendu').value='favorable';
+  document.getElementById('avis-pour').value=0;
+  document.getElementById('avis-contre').value=0;
+  document.getElementById('avis-abstention').value=0;
+  document.getElementById('avisModalTitle').textContent='Nouvel avis CSE';
+  clearAvisFile();
+}
+
+function saveAvis(){
+  const titre=document.getElementById('avis-titre').value.trim();
+  const date=document.getElementById('avis-date').value;
+  if(!titre){ toast('Titre requis','e'); return; }
+  if(!date){ toast('Date requise','e'); return; }
+  const editId=document.getElementById('avis-edit-id').value;
+  const existing=editId?avis.find(a=>a.id===editId):null;
+  const obj={
+    id:existing?existing.id:Date.now().toString(),
+    titre, date,
+    type:document.getElementById('avis-type').value,
+    rendu:document.getElementById('avis-rendu').value,
+    pour:parseInt(document.getElementById('avis-pour').value)||0,
+    contre:parseInt(document.getElementById('avis-contre').value)||0,
+    abstention:parseInt(document.getElementById('avis-abstention').value)||0,
+    texte:document.getElementById('avis-texte').value.trim(),
+    fileData: avisFileTemp?avisFileTemp.data:(existing?existing.fileData:null),
+    fileName: avisFileTemp?avisFileTemp.name:(existing?existing.fileName:null),
+    createdAt: existing?existing.createdAt:new Date().toISOString(),
+  };
+  if(existing){ avis=avis.map(a=>a.id===editId?obj:a); }
+  else { avis.push(obj); }
+  saveToDrive();
+  closeModal('avisModal');
+  resetAvisForm();
+  renderAvis();
+  updateAvisCount();
+  toast(existing?'Avis modifié':'Avis enregistré','s');
+}
+
+function editAvis(id){
+  const a=avis.find(x=>x.id===id); if(!a) return;
+  document.getElementById('avis-edit-id').value=a.id;
+  document.getElementById('avis-titre').value=a.titre||'';
+  document.getElementById('avis-date').value=a.date||'';
+  document.getElementById('avis-type').value=a.type||'ordinaire';
+  document.getElementById('avis-rendu').value=a.rendu||'favorable';
+  document.getElementById('avis-pour').value=a.pour||0;
+  document.getElementById('avis-contre').value=a.contre||0;
+  document.getElementById('avis-abstention').value=a.abstention||0;
+  document.getElementById('avis-texte').value=a.texte||'';
+  document.getElementById('avisModalTitle').textContent='Modifier l\'avis';
+  if(a.fileData){
+    avisFileTemp={data:a.fileData,name:a.fileName||'Fichier',size:0,ext:(a.fileName||'').split('.').pop()};
+    const zone=document.getElementById('avis-file-zone'); if(zone) zone.classList.add('has-file');
+    const nameEl=document.getElementById('avis-file-name'); if(nameEl) nameEl.textContent=a.fileName||'Fichier joint';
+    const subEl=document.getElementById('avis-file-sub'); if(subEl) subEl.textContent='Fichier existant';
+    const clr=document.getElementById('avis-file-clear'); if(clr) clr.style.display='';
+  } else { clearAvisFile(); }
+  openModal('avisModal');
+}
+
+function deleteAvis(id){
+  if(!confirm('Supprimer cet avis ?')) return;
+  avis=avis.filter(a=>a.id!==id);
+  saveToDrive(); renderAvis(); updateAvisCount();
+  toast('Avis supprimé','i');
+}
+
+function viewAvisFile(id){
+  const a=avis.find(x=>x.id===id); if(!a||!a.fileData) return;
+  document.getElementById('viewerTitle').textContent=a.titre;
+  document.getElementById('viewerCode').textContent=(a.fileName||'Pièce jointe')+' · '+fmtDate(a.date);
+  document.getElementById('viewerDlBtn').onclick=()=>{
+    const lnk=document.createElement('a'); lnk.href=a.fileData; lnk.download=a.fileName||a.titre; lnk.click();
+  };
+  _vDispatch(a.fileData, a.fileName||a.titre, null);
+  document.getElementById('viewerOv').classList.add('open');
+}
+
 function init() {
   buildInstPanels(); populateSelects();
   document.getElementById('dDate').valueAsDate=new Date();
@@ -1316,7 +1638,8 @@ function init() {
     docs=JSON.parse(localStorage.getItem('fo_docs')||'[]');
     meetings=JSON.parse(localStorage.getItem('fo_meetings')||'[]');
     fiches=JSON.parse(localStorage.getItem('fo_fiches')||'[]');
-  } catch(e){ docs=[]; meetings=[]; fiches=[]; }
+    avis=JSON.parse(localStorage.getItem('fo_avis')||'[]');
+  } catch(e){ docs=[]; meetings=[]; fiches=[]; avis=[]; }
   renderAll(); go('dashboard');
   if(gClientId) startGIS(); else { setSyncStatus('offline','Configurer Drive'); showConnectBanner(); }
   document.getElementById('ff-skill-input').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); addSkillTag(this.value.trim()); this.value=''; } });
@@ -1469,7 +1792,7 @@ async function loadFromDrive() {
   if(DATA_FILE_ID){
     const r=await driveReq(`https://www.googleapis.com/drive/v3/files/${DATA_FILE_ID}?alt=media`);
     const data=await r.json();
-    docs=data.docs||[]; meetings=data.meetings||[]; fiches=data.fiches||[];
+    docs=data.docs||[]; meetings=data.meetings||[]; fiches=data.fiches||[]; avis=data.avis||[];
     toast(`${docs.length} documents chargés depuis Drive`,'s');
   } else {
     // Nouveau fichier Drive
@@ -1479,13 +1802,13 @@ async function loadFromDrive() {
 async function saveToDrive() {
   if(!driveConnected||!accessToken){ localStorage.setItem('fo_docs',JSON.stringify(docs)); localStorage.setItem('fo_meetings',JSON.stringify(meetings)); localStorage.setItem('fo_fiches',JSON.stringify(fiches)); return; }
   try {
-    const payload=JSON.stringify({docs,meetings,fiches,lastSaved:new Date().toISOString()});
+    const payload=JSON.stringify({docs,meetings,fiches,avis,lastSaved:new Date().toISOString()});
     const blob=new Blob([payload],{type:'application/json'});
     if(DATA_FILE_ID){ await driveReq(`https://www.googleapis.com/upload/drive/v3/files/${DATA_FILE_ID}?uploadType=media`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:blob}); }
     else { const meta={name:'GED_FO_Wingles_data.json',description:'GED Force Ouvrière — O-I Wingles'}; const form=new FormData(); form.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'})); form.append('file',blob); const r=await driveReq('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',body:form}); const d=await r.json(); DATA_FILE_ID=d.id; localStorage.setItem('fo_data_fid',DATA_FILE_ID); }
     setSyncStatus('online','Drive connecté ✓'); setTimeout(()=>setSyncStatus('online','Drive connecté'),2000);
   } catch(e){ console.error(e); toast('Erreur sauvegarde Drive','e'); }
-  localStorage.setItem('fo_docs',JSON.stringify(docs)); localStorage.setItem('fo_meetings',JSON.stringify(meetings)); localStorage.setItem('fo_fiches',JSON.stringify(fiches));
+  localStorage.setItem('fo_docs',JSON.stringify(docs)); localStorage.setItem('fo_meetings',JSON.stringify(meetings)); localStorage.setItem('fo_fiches',JSON.stringify(fiches)); localStorage.setItem('fo_avis',JSON.stringify(avis));
 }
 async function syncAll() {
   showLoading('Synchronisation Drive…');
@@ -1928,7 +2251,7 @@ function renderMeetings(){ const c=document.getElementById('meetingsList'); let 
 
 function doSearch(q){ const stats=document.getElementById('gsStats'); const results=document.getElementById('gsResults'); if(!q||q.length<2){ results.innerHTML='<div style="color:var(--muted);text-align:center;padding:40px;font-size:13px;grid-column:1/-1">Tapez votre recherche…</div>'; stats.textContent=''; return; } const ql=q.toLowerCase(); const out=[]; docs.forEach(doc=>{ const inst=INSTANCES.find(i=>i.id===doc.instance); const hay=[doc.title,doc.notes,CATS[doc.type]?.l,inst?.label,doc.date].filter(Boolean).join(' ').toLowerCase(); if(hay.includes(ql)) out.push({kind:'doc',data:doc,inst,label:doc.title,sub:`${inst?.label} · ${CATS[doc.type]?.l} · ${fmtDate(doc.date)}`,ico:CATS[doc.type]?.ico||'📄',color:inst?.color}); }); meetings.forEach(m=>{ const inst=INSTANCES.find(i=>i.id===m.instance); const hay=[m.notes,m.location,inst?.label,m.date].filter(Boolean).join(' ').toLowerCase(); if(hay.includes(ql)) out.push({kind:'meeting',data:m,inst,label:`Réunion ${inst?.label||''}`,sub:`${fmtDate(m.date)}${m.duration?' · '+m.duration:''}${m.location?' · '+m.location:''}`,ico:'📅',color:inst?.color}); }); fiches.forEach(f=>{ const cat=FF_CATS[f.categorie]; const hay=[f.titre,f.code,f.service,f.coeff,f.mission,f.activites,f.formation,f.notes,...(f.skills||[])].filter(Boolean).join(' ').toLowerCase(); if(hay.includes(ql)) out.push({kind:'fiche',data:f,label:f.titre,sub:`${cat?.l||''} · ${f.service||''} · Coeff: ${f.coeff||'—'}`,ico:'👔',color:cat?.color}); }); stats.textContent=`${out.length} résultat${out.length>1?'s':''} pour "${q}"`; if(!out.length){ results.innerHTML=`<div style="color:var(--muted);text-align:center;padding:40px;grid-column:1/-1">Aucun résultat pour "${q}"</div>`; return; } function hl(txt,q){ if(!txt) return ''; try{ return txt.split(new RegExp('('+q+')','gi')).map(p=>p.toLowerCase()===ql?`<span class="hl">${p}</span>`:p).join(''); }catch(e){ return txt; } } results.innerHTML=out.map((r,i)=>{ let clickAction=''; if(r.kind==='doc') clickAction=`go('${r.data.instance}');setTimeout(()=>viewDoc('${r.data.id}'),300)`; else if(r.kind==='meeting') clickAction=`go('agenda');setTimeout(()=>{selectDay('${r.data.date}');renderMeetings()},300)`; else clickAction=`go('fonctions');setTimeout(()=>editFiche('${r.data.id}'),300)`; return `<div class="scard" style="--sc:${r.color||'var(--red)'};animation-delay:${i*.04}s" onclick="${clickAction}"><div style="display:flex;align-items:center;gap:9px;margin-bottom:5px"><span style="font-size:18px">${r.ico}</span><h4>${hl(r.label,q)}</h4><span style="font-size:9px;background:rgba(255,255,255,.07);padding:2px 6px;border-radius:4px;color:var(--muted);margin-left:auto">${r.kind==='doc'?'Document':r.kind==='meeting'?'Réunion':'Fiche'}</span></div><p>${hl(r.sub,q)}</p>${r.data.notes||r.data.mission?`<p style="margin-top:3px;font-size:10px;color:var(--muted)">${hl((r.data.notes||r.data.mission||'').substring(0,80),q)}...</p>`:''}</div>`; }).join(''); }
 
-function renderAll(){ renderStats(); renderDashCards(); INSTANCES.forEach(inst=>renderDocRows(inst.id,curFilter[inst.id]||'all')); renderCal(); renderMeetings(); document.getElementById('cnt-agenda').textContent=meetings.length; renderFFCatsBar(); renderFiches(); updateFFCount(); updateNavCounts(); }
+function renderAll(){ renderStats(); renderDashCards(); INSTANCES.forEach(inst=>renderDocRows(inst.id,curFilter[inst.id]||'all')); renderCal(); renderMeetings(); document.getElementById('cnt-agenda').textContent=meetings.length; renderAvis(); updateAvisCount(); renderFFCatsBar(); renderFiches(); updateFFCount(); updateNavCounts(); }
 function renderStats(){ const now=new Date(); document.getElementById('s-total').textContent=docs.length; document.getElementById('s-synced').textContent=docs.filter(d=>d.driveId).length; document.getElementById('s-meetings').textContent=meetings.length; document.getElementById('s-month').textContent=docs.filter(d=>(now-new Date(d.createdAt))/86400000<=30).length; }
 function renderDashCards(){ document.getElementById('dashCards').innerHTML=INSTANCES.map(inst=>{ const d=docs.filter(x=>x.instance===inst.id); return `<div class="inst-card" style="--ic-color:${inst.color}" onclick="go('${inst.id}')"><div class="ic-top"><div class="ic-badge">${inst.id.toUpperCase().slice(0,4)}</div><div class="ic-name">${inst.label}</div></div><div class="ic-sub">${inst.sub}</div><div class="ic-stats"><div class="ic-stat"><strong>${d.length}</strong><span>docs</span></div><div class="ic-stat"><strong>${d.filter(x=>x.type==='pv').length}</strong><span>PV</span></div><div class="ic-stat"><strong>${d.filter(x=>x.type==='oj').length}</strong><span>OJ</span></div></div></div>`; }).join(''); }
 function renderDocRows(instId,filter,search=''){
@@ -1992,7 +2315,7 @@ function toggleSbGroup(id){
 }
 function toggleGroup(id){ toggleSbGroup(id); }
 
-const PAGE_TITLES = { dashboard:'Tableau de bord', agenda:'Agenda', fonctions:'Fiches de fonctions', search:'Recherche globale', cse:'CSE', cssct:'CSSCT', formation:'Commission Formation', eco:'Commission Économique', egalite:'Égalité Professionnelle', logement:'Commission Logement', marches:'Commission Marchés', csec:'CSE Central', cssctc:'CSSCT Centrale', nao:'NAO', negociation:'Négociation Entreprise' };
+const PAGE_TITLES = { dashboard:'Tableau de bord', agenda:'Agenda', avis:'Avis CSE', fonctions:'Fiches de fonctions', search:'Recherche globale', cse:'CSE', cssct:'CSSCT', formation:'Commission Formation', eco:'Commission Économique', egalite:'Égalité Professionnelle', logement:'Commission Logement', marches:'Commission Marchés', csec:'CSE Central', cssctc:'CSSCT Centrale', nao:'NAO', negociation:'Négociation Entreprise' };
 
 function go(id){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
@@ -2004,6 +2327,7 @@ function go(id){
   if(id==='agenda'){ renderCal(); renderMeetings(); }
   else if(id==='search'){ setTimeout(()=>document.getElementById('gsInput').focus(),100); }
   else if(id==='dashboard'){ renderStats(); renderDashCards(); }
+  else if(id==='avis'){ renderAvis(); }
   else if(id==='fonctions'){ renderFFCatsBar(); renderFiches(); }
   else renderDocRows(id,curFilter[id]||'all');
 }
@@ -2031,6 +2355,9 @@ window.deleteFiche=deleteFiche; window.editFiche=editFiche; window.setFFCat=setF
 window.filterFiches=filterFiches; window.removeSkillTag=removeSkillTag; window.resetFFForm=resetFFForm;
 window.toggleGroup=toggleGroup; window.toggleSbGroup=toggleSbGroup;
 window.handleFFFile=handleFFFile; window.clearFFFile=clearFFFile; window.viewFFFile=viewFFFile;
+window.saveAvis=saveAvis; window.editAvis=editAvis; window.deleteAvis=deleteAvis;
+window.viewAvisFile=viewAvisFile; window.filterAvis=filterAvis;
+window.handleAvisFile=handleAvisFile; window.clearAvisFile=clearAvisFile; window.resetAvisForm=resetAvisForm;
 window.vGoPage=vGoPage; window.vZoom=vZoom; window.vZoomFit=vZoomFit;
 window.showConnectBanner=showConnectBanner; window.hideConnectBanner=hideConnectBanner; window.requestNewToken=requestNewToken;
 
