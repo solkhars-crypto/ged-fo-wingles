@@ -1669,7 +1669,24 @@ function renderFiches(query=''){
       <div class="ff-footer">
         <span class="ff-coeff">${f.coeff||'—'}</span>
         <div class="ff-acts">
-          ${(f.fileData||f.driveFileId)?`<button class="ibtn view" title="${f.driveFileId?'Drive ☁':'Fiche 📄'}" onclick="viewFFFile('${f.id}')">${f.driveFileId?'☁':'📄'}</button>`:''}`; } const linkedDocs=Array.from(document.getElementById('mDocs').selectedOptions).map(o=>o.value); const m={id:Date.now().toString(),instance:document.getElementById('mInstance').value,date,start,end,duration,location:document.getElementById('mLoc').value,notes:document.getElementById('mNotes').value,linkedDocs,createdAt:new Date().toISOString()}; meetings.push(m); saveToDrive(); closeModal('meetingModal'); clearMtgForm(); renderCal(); renderMeetings(); renderStats(); document.getElementById('cnt-agenda').textContent=meetings.length; toast('Réunion enregistrée','s'); }
+          ${(f.fileData||f.driveFileId)?`<button class="ibtn view" title="${f.driveFileId?'Drive ☁':'Fiche 📄'}" onclick="viewFFFile('${f.id}')">${f.driveFileId?'☁':'📄'}</button>`:''}
+          <button class="ibtn" title="Modifier" onclick="editFiche('${f.id}')">✏</button>
+          <button class="ibtn del" title="Supprimer" onclick="deleteFiche('${f.id}')">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function saveMeeting() {
+  const date=document.getElementById('mDate').value;
+  if(!date){ toast('Date requise','e'); return; }
+  const start=document.getElementById('mStart').value; const end=document.getElementById('mEnd').value;
+  let duration='';
+  if(start&&end){ const [sh,sm]=start.split(':').map(Number); const [eh,em]=end.split(':').map(Number); const mins=(eh*60+em)-(sh*60+sm); if(mins>0) duration=`${Math.floor(mins/60)}h${mins%60>0?String(mins%60)+'min':''}`; }
+  const linkedDocs=Array.from(document.getElementById('mDocs').selectedOptions).map(o=>o.value);
+  const m={id:Date.now().toString(),instance:document.getElementById('mInstance').value,date,start,end,duration,location:document.getElementById('mLoc').value,notes:document.getElementById('mNotes').value,linkedDocs,createdAt:new Date().toISOString()};
+  meetings.push(m); saveToDrive(); closeModal('meetingModal'); clearMtgForm(); renderCal(); renderMeetings(); renderStats(); document.getElementById('cnt-agenda').textContent=meetings.length; toast('Réunion enregistrée','s');
+}
 function deleteMeeting(id){ if(!confirm('Supprimer cette réunion ?')) return; meetings=meetings.filter(m=>m.id!==id); saveToDrive(); renderCal(); renderMeetings(); renderStats(); document.getElementById('cnt-agenda').textContent=meetings.length; toast('Réunion supprimée','i'); }
 function clearMtgForm(){ ['mLoc','mNotes'].forEach(id=>document.getElementById(id).value=''); document.getElementById('mDate').valueAsDate=new Date(); document.getElementById('mStart').value='09:00'; document.getElementById('mEnd').value='11:00'; }
 
