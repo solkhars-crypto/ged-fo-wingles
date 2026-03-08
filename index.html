@@ -714,17 +714,36 @@ body {
 }
 .fg { margin-bottom: 14px; }
 .fg label {
-  display: block; font-family: var(--font-m); font-size: 9.5px; font-weight: 500;
-  letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
+  display: block; font-family: var(--font-m); font-size: 9.5px; font-weight: 600;
+  letter-spacing: 1.5px; text-transform: uppercase; color: #94A3B8; margin-bottom: 6px;
 }
 .fg input,.fg select,.fg textarea {
-  width: 100%; background: var(--bg3); border: 1px solid var(--border);
-  border-radius: 8px; padding: 9px 13px; color: var(--text);
+  width: 100%; background: var(--bg3); border: 1px solid rgba(255,255,255,.10);
+  border-radius: 8px; padding: 9px 13px; color: #F1F5F9;
   font-size: 12.5px; font-family: var(--font-b); outline: none;
-  transition: border-color .2s;
+  transition: border-color .2s, background .2s;
 }
-.fg input:focus,.fg select:focus,.fg textarea:focus { border-color: var(--red); }
-.fg select option { background: #1a2030; }
+.fg input:focus,.fg select:focus,.fg textarea:focus {
+  border-color: var(--red); background: rgba(230,57,70,.04);
+}
+.fg input::placeholder,.fg textarea::placeholder { color: #475569; }
+.fg select option { background: #1a2030; color: #F1F5F9; }
+
+/* Zone fichier joint fiche */
+.ff-file-zone {
+  display: flex; align-items: center; gap: 11px;
+  background: var(--bg3); border: 1.5px dashed rgba(255,255,255,.12);
+  border-radius: 9px; padding: 12px 14px;
+  cursor: pointer; transition: border-color .2s, background .2s;
+}
+.ff-file-zone:hover { border-color: rgba(230,57,70,.5); background: rgba(230,57,70,.04); }
+.ff-file-zone.has-file { border-style: solid; border-color: rgba(46,204,113,.35); background: rgba(46,204,113,.04); }
+.ff-file-icon { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; background: rgba(255,255,255,.06); }
+.ff-file-info { flex: 1; min-width: 0; }
+.ff-file-name { font-size: 12px; font-weight: 600; color: #F1F5F9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ff-file-sub { font-size: 10px; color: var(--muted); margin-top: 2px; font-family: var(--font-m); }
+.ff-file-clear { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; padding: 0 4px; flex-shrink: 0; transition: color .15s; }
+.ff-file-clear:hover { color: #f87171; }
 .fg-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .modal-acts { display: flex; gap: 9px; justify-content: flex-end; margin-top: 20px; }
 
@@ -1156,6 +1175,21 @@ body {
     </div>
     <div class="fg"><label>Conditions / EPI</label><input type="text" id="ff-conditions" placeholder="Ex: Travail posté, EPI requis…"></div>
     <div class="fg"><label>Notes FO</label><textarea id="ff-notes" rows="2" placeholder="Observations, litiges, évolutions…"></textarea></div>
+
+    <!-- PIÈCE JOINTE -->
+    <div class="fg">
+      <label>Fiche officielle — Pièce jointe</label>
+      <div class="ff-file-zone" id="ff-file-zone" onclick="document.getElementById('ff-file-input').click()">
+        <div class="ff-file-icon" id="ff-file-icon">📎</div>
+        <div class="ff-file-info">
+          <div class="ff-file-name" id="ff-file-name">Cliquez pour joindre la fiche officielle</div>
+          <div class="ff-file-sub" id="ff-file-sub">PDF, Word, Excel, image — max 10 Mo</div>
+        </div>
+        <button class="ff-file-clear" id="ff-file-clear" style="display:none" onclick="event.stopPropagation();clearFFFile()" title="Supprimer">✕</button>
+        <input type="file" id="ff-file-input" style="display:none" accept=".pdf,.docx,.doc,.xlsx,.xls,.png,.jpg,.jpeg" onchange="handleFFFile(this)">
+      </div>
+    </div>
+
     <div class="modal-acts">
       <button class="btn btn-secondary" onclick="closeModal('ffModal');resetFFForm()">Annuler</button>
       <button class="btn btn-primary" onclick="saveFiche()">Enregistrer la fiche</button>
@@ -1232,6 +1266,7 @@ const FF_CATS = {
 };
 
 let docs=[], meetings=[], fiches=[];
+let ffFileTemp=null;
 let gClientId = localStorage.getItem('fo_cid') || '321352148658-gmlhrr68ptvn4lgv21akrj8eroiirn5g.apps.googleusercontent.com';
 let accessToken=null, tokenExpiry=0, driveConnected=false;
 let DATA_FILE_ID = localStorage.getItem('fo_data_fid') || null;
@@ -1352,12 +1387,55 @@ function handleFileInput(e,instId){ Array.from(e.target.files).forEach(f=>ingest
 function ingestFile(file,instId){ const reader=new FileReader(); reader.onload=async e=>{ const type=guessType(file.name); const doc={id:Date.now().toString()+Math.random().toString(36).slice(2),instance:instId,type,title:file.name.replace(/\.[^/.]+$/,''),date:new Date().toISOString().split('T')[0],notes:'',driveId:null,fileData:e.target.result,fileName:file.name,createdAt:new Date().toISOString()}; docs.push(doc); await saveToDrive(); if(driveConnected){ const inst=INSTANCES.find(i=>i.id===instId); const fid=await uploadFileToDrive(doc.fileData,doc.fileName,inst?inst.label:instId); if(fid){ doc.driveId=fid; await saveToDrive(); } } renderDocRows(instId,curFilter[instId]||'all'); renderStats(); renderDashCards(); toast(`"${file.name}" importé`,'s'); }; reader.readAsDataURL(file); }
 function guessType(name){ const n=name.toLowerCase(); if(n.includes('pv')||n.includes('proc')) return 'pv'; if(n.includes('convoc')) return 'conv'; if(n.includes('ordre')||n.includes(' oj')) return 'oj'; if(n.includes('accord')||n.includes('nao')) return 'fo'; return 'div'; }
 
+function resetFFFile(){
+  ffFileTemp=null;
+  const zone=document.getElementById('ff-file-zone');
+  if(zone) zone.classList.remove('has-file');
+  const nameEl=document.getElementById('ff-file-name'); if(nameEl) nameEl.textContent='Cliquez pour joindre la fiche officielle';
+  const subEl=document.getElementById('ff-file-sub'); if(subEl) subEl.textContent='PDF, Word, Excel, image — max 10 Mo';
+  const iconEl=document.getElementById('ff-file-icon'); if(iconEl) iconEl.textContent='📎';
+  const clr=document.getElementById('ff-file-clear'); if(clr) clr.style.display='none';
+  const inp=document.getElementById('ff-file-input'); if(inp) inp.value='';
+}
+function handleFFFile(input){
+  const file=input.files[0]; if(!file) return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  const icons={pdf:'📄',docx:'📝',doc:'📝',xlsx:'📊',xls:'📊',png:'🖼️',jpg:'🖼️',jpeg:'🖼️'};
+  const reader=new FileReader();
+  reader.onload=e=>{
+    ffFileTemp={data:e.target.result, name:file.name, size:file.size, ext};
+    const zone=document.getElementById('ff-file-zone'); if(zone) zone.classList.add('has-file');
+    const nameEl=document.getElementById('ff-file-name'); if(nameEl) nameEl.textContent=file.name;
+    const subEl=document.getElementById('ff-file-sub'); if(subEl) subEl.textContent=`${(file.size/1024).toFixed(0)} Ko · ${ext.toUpperCase()}`;
+    const iconEl=document.getElementById('ff-file-icon'); if(iconEl) iconEl.textContent=icons[ext]||'📄';
+    const clr=document.getElementById('ff-file-clear'); if(clr) clr.style.display='';
+  };
+  reader.readAsDataURL(file);
+}
+function clearFFFile(){
+  ffFileTemp=null; resetFFFile();
+}
+function viewFFFile(id){
+  const f=fiches.find(x=>x.id===id); if(!f||!f.fileData) return;
+  document.getElementById('viewerTitle').textContent=f.titre;
+  document.getElementById('viewerCode').textContent=(f.fileName||'Pièce jointe')+' · '+f.categorie;
+  document.getElementById('viewerDlBtn').onclick=()=>{const a=document.createElement('a');a.href=f.fileData;a.download=f.fileName||f.titre;a.click();};
+  const body=document.getElementById('viewerBody'); body.innerHTML='';
+  const mime=f.fileData.split(';')[0].split(':')[1]||'';
+  if(mime==='application/pdf'){ const iframe=document.createElement('iframe'); iframe.src=f.fileData; body.appendChild(iframe); }
+  else if(mime.startsWith('image/')){ const img=document.createElement('img'); img.src=f.fileData; body.appendChild(img); }
+  else body.innerHTML=`<div class="no-preview"><div style="font-size:56px;margin-bottom:14px">📄</div><p style="color:var(--text)">${f.fileName||f.titre}</p><p style="margin-top:8px"><button class="btn btn-primary" onclick="const a=document.createElement('a');a.href='${f.fileData}';a.download='${f.fileName||f.titre}';a.click()">↓ Télécharger</button></p></div>`;
+  document.getElementById('viewerOv').classList.add('open');
+}
 function addSkillTag(val){ if(!val||ffSkillsTemp.includes(val)) return; ffSkillsTemp.push(val); renderSkillTags(); }
 function removeSkillTag(i){ ffSkillsTemp.splice(i,1); renderSkillTags(); }
 function renderSkillTags(){ const wrap=document.getElementById('ff-skills-tags'); wrap.innerHTML=ffSkillsTemp.map((s,i)=>`<span class="skill-tag">${s}<button type="button" onclick="removeSkillTag(${i})">×</button></span>`).join(''); }
-function resetFFForm(){ ['ff-edit-id','ff-titre','ff-code','ff-service','ff-coeff','ff-mission','ff-activites','ff-formation','ff-experience','ff-conditions','ff-notes'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; }); document.getElementById('ff-convention').value='UIMM - Fabrication du Verre'; document.getElementById('ff-categorie').value='chaud'; document.getElementById('ff-skill-input').value=''; ffSkillsTemp=[]; renderSkillTags(); }
-function editFiche(id){ const f=fiches.find(x=>x.id===id); if(!f) return; document.getElementById('ff-edit-id').value=id; document.getElementById('ff-titre').value=f.titre||''; document.getElementById('ff-code').value=f.code||''; document.getElementById('ff-categorie').value=f.categorie||'cadre'; document.getElementById('ff-service').value=f.service||''; document.getElementById('ff-coeff').value=f.coeff||''; document.getElementById('ff-convention').value=f.convention||'UIMM - Fabrication du Verre'; document.getElementById('ff-mission').value=f.mission||''; document.getElementById('ff-activites').value=f.activites||''; document.getElementById('ff-formation').value=f.formation||''; document.getElementById('ff-experience').value=f.experience||''; document.getElementById('ff-conditions').value=f.conditions||''; document.getElementById('ff-notes').value=f.notes||''; ffSkillsTemp=[...(f.skills||[])]; renderSkillTags(); openModal('ffModal'); }
-function saveFiche(){ const titre=document.getElementById('ff-titre').value.trim(); if(!titre){ toast('Intitulé requis','e'); return; } const editId=document.getElementById('ff-edit-id').value; const f={id:editId||Date.now().toString(),titre,code:document.getElementById('ff-code').value.trim(),categorie:document.getElementById('ff-categorie').value,service:document.getElementById('ff-service').value.trim(),coeff:document.getElementById('ff-coeff').value.trim(),convention:document.getElementById('ff-convention').value.trim(),mission:document.getElementById('ff-mission').value.trim(),activites:document.getElementById('ff-activites').value.trim(),skills:[...ffSkillsTemp],formation:document.getElementById('ff-formation').value.trim(),experience:document.getElementById('ff-experience').value.trim(),conditions:document.getElementById('ff-conditions').value.trim(),notes:document.getElementById('ff-notes').value.trim(),createdAt:editId?(fiches.find(x=>x.id===editId)?.createdAt||new Date().toISOString()):new Date().toISOString(),updatedAt:new Date().toISOString()}; if(editId){ const idx=fiches.findIndex(x=>x.id===editId); if(idx>=0) fiches[idx]=f; else fiches.push(f); } else fiches.push(f); saveToDrive(); closeModal('ffModal'); resetFFForm(); renderFiches(); updateFFCount(); toast(`Fiche "${f.titre}" enregistrée`,'s'); }
+function resetFFForm(){ ['ff-edit-id','ff-titre','ff-code','ff-service','ff-coeff','ff-mission','ff-activites','ff-formation','ff-experience','ff-conditions','ff-notes'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; }); document.getElementById('ff-convention').value='UIMM - Fabrication du Verre'; document.getElementById('ff-categorie').value='chaud'; document.getElementById('ff-skill-input').value=''; ffSkillsTemp=[]; renderSkillTags(); resetFFFile(); }
+function editFiche(id){ const f=fiches.find(x=>x.id===id); if(!f) return; document.getElementById('ff-edit-id').value=id; document.getElementById('ff-titre').value=f.titre||''; document.getElementById('ff-code').value=f.code||''; document.getElementById('ff-categorie').value=f.categorie||'cadre'; document.getElementById('ff-service').value=f.service||''; document.getElementById('ff-coeff').value=f.coeff||''; document.getElementById('ff-convention').value=f.convention||'UIMM - Fabrication du Verre'; document.getElementById('ff-mission').value=f.mission||''; document.getElementById('ff-activites').value=f.activites||''; document.getElementById('ff-formation').value=f.formation||''; document.getElementById('ff-experience').value=f.experience||''; document.getElementById('ff-conditions').value=f.conditions||''; document.getElementById('ff-notes').value=f.notes||''; ffSkillsTemp=[...(f.skills||[])]; renderSkillTags();
+  // Fichier joint existant
+  if(f.fileData){ ffFileTemp={data:f.fileData,name:f.fileName||'Fichier joint',size:0,ext:(f.fileName||'').split('.').pop()}; const ext=ffFileTemp.ext.toLowerCase(); const icons={pdf:'📄',docx:'📝',doc:'📝',xlsx:'📊',xls:'📊',png:'🖼️',jpg:'🖼️',jpeg:'🖼️'}; const zone=document.getElementById('ff-file-zone'); if(zone) zone.classList.add('has-file'); const nameEl=document.getElementById('ff-file-name'); if(nameEl) nameEl.textContent=f.fileName||'Fichier joint'; const subEl=document.getElementById('ff-file-sub'); if(subEl) subEl.textContent=(ext.toUpperCase()||'Fichier')+' · Fichier existant'; const iconEl=document.getElementById('ff-file-icon'); if(iconEl) iconEl.textContent=icons[ext]||'📄'; const clr=document.getElementById('ff-file-clear'); if(clr) clr.style.display=''; } else { resetFFFile(); }
+  openModal('ffModal'); }
+function saveFiche(){ const titre=document.getElementById('ff-titre').value.trim(); if(!titre){ toast('Intitulé requis','e'); return; } const editId=document.getElementById('ff-edit-id').value; const existingFiche=editId?fiches.find(x=>x.id===editId):null; const f={id:editId||Date.now().toString(),titre,code:document.getElementById('ff-code').value.trim(),categorie:document.getElementById('ff-categorie').value,service:document.getElementById('ff-service').value.trim(),coeff:document.getElementById('ff-coeff').value.trim(),convention:document.getElementById('ff-convention').value.trim(),mission:document.getElementById('ff-mission').value.trim(),activites:document.getElementById('ff-activites').value.trim(),skills:[...ffSkillsTemp],formation:document.getElementById('ff-formation').value.trim(),experience:document.getElementById('ff-experience').value.trim(),conditions:document.getElementById('ff-conditions').value.trim(),notes:document.getElementById('ff-notes').value.trim(),fileData:ffFileTemp?ffFileTemp.data:(existingFiche?existingFiche.fileData:null),fileName:ffFileTemp?ffFileTemp.name:(existingFiche?existingFiche.fileName:null),createdAt:editId?(existingFiche?.createdAt||new Date().toISOString()):new Date().toISOString(),updatedAt:new Date().toISOString()}; if(editId){ const idx=fiches.findIndex(x=>x.id===editId); if(idx>=0) fiches[idx]=f; else fiches.push(f); } else fiches.push(f); saveToDrive(); closeModal('ffModal'); resetFFForm(); renderFiches(); updateFFCount(); toast(`Fiche "${f.titre}" enregistrée`,'s'); }
 function deleteFiche(id){ if(!confirm('Supprimer cette fiche ?')) return; fiches=fiches.filter(x=>x.id!==id); saveToDrive(); renderFiches(); updateFFCount(); toast('Fiche supprimée','i'); }
 function updateFFCount(){ const el=document.getElementById('cnt-fonctions'); if(el) el.textContent=fiches.length; }
 
@@ -1397,7 +1475,8 @@ function renderFiches(query=''){
       <div class="ff-footer">
         <span class="ff-coeff">${f.coeff||'—'}</span>
         <div class="ff-acts">
-          <button class="ibtn view" title="Modifier" onclick="editFiche('${f.id}')">✏️</button>
+          ${f.fileData?`<button class="ibtn view" title="Voir la fiche officielle" onclick="viewFFFile('${f.id}')">📄</button>`:''}
+          <button class="ibtn" title="Modifier" onclick="editFiche('${f.id}')">✏️</button>
           <button class="ibtn del" title="Supprimer" onclick="deleteFiche('${f.id}')">✕</button>
         </div>
       </div>
@@ -1519,6 +1598,7 @@ window.saveAndConnect=saveAndConnect; window.saveFiche=saveFiche;
 window.deleteFiche=deleteFiche; window.editFiche=editFiche; window.setFFCat=setFFCat;
 window.filterFiches=filterFiches; window.removeSkillTag=removeSkillTag; window.resetFFForm=resetFFForm;
 window.toggleGroup=toggleGroup; window.toggleSbGroup=toggleSbGroup;
+window.handleFFFile=handleFFFile; window.clearFFFile=clearFFFile; window.viewFFFile=viewFFFile;
 
 init();
 </script>
