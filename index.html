@@ -1640,28 +1640,20 @@ function _vOpenOffice(driveId, fileName, fileData){
         </a>
       </div>`;
     } else {
-      // PC → iframe via Google Docs viewer (seule URL qui marche en iframe pour Office)
-      const iframe=document.createElement('iframe');
-      iframe.src='https://docs.google.com/viewer?srcid='+driveId+'&pid=explorer&efh=false&a=v&chrome=false&embedded=true';
-      iframe.style.cssText='width:100%;height:100%;border:none;border-radius:8px;background:#fff';
-      // Si Google Docs viewer échoue → afficher bouton Drive
-      let loaded=false;
-      iframe.onload=()=>{ loaded=true; };
-      setTimeout(()=>{
-        if(!loaded||iframe.contentDocument===null){
-          const urlView='https://drive.google.com/file/d/'+driveId+'/view';
-          body.innerHTML=`<div class="no-preview" style="gap:14px;display:flex;flex-direction:column;align-items:center;padding:40px 20px">
-            <div class="np-ico">${ico}</div>
-            <p style="color:var(--text);font-size:14px;font-weight:600">${fileName}</p>
-            <p style="font-size:12px;color:var(--muted)">L'aperçu n'est pas disponible dans le navigateur.</p>
-            <a href="${urlView}" target="_blank" rel="noopener" style="text-decoration:none;margin-top:4px">
-              <button class="btn btn-primary" style="font-size:13px;padding:10px 22px">☁ Ouvrir dans Google Drive</button>
-            </a>
-          </div>`;
-        }
-      },5000);
-      body.innerHTML='';
-      body.appendChild(iframe);
+      // PC → bouton direct Drive (Google bloque systématiquement les iframes Office)
+      const urlView='https://drive.google.com/file/d/'+driveId+'/view';
+      window.open(urlView,'_blank');
+      body.innerHTML=`<div class="no-preview" style="gap:16px;display:flex;flex-direction:column;align-items:center;padding:60px 20px">
+        <div class="np-ico">${ico}</div>
+        <p style="color:var(--text);font-size:15px;font-weight:600;text-align:center">${fileName}</p>
+        <p style="font-size:12px;color:var(--muted);text-align:center;max-width:380px;line-height:1.6">
+          Google bloque l'aperçu des fichiers Office dans les applications web.<br>
+          Le fichier vient de s'ouvrir dans un nouvel onglet.
+        </p>
+        <a href="${urlView}" target="_blank" rel="noopener" style="text-decoration:none;margin-top:6px">
+          <button class="btn btn-primary" style="font-size:13px;padding:12px 28px">☁ Rouvrir dans Google Drive</button>
+        </a>
+      </div>`;
     }
   } else if(fileData){
     // Pas de Drive → téléchargement direct
