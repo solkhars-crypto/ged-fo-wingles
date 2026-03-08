@@ -1614,14 +1614,23 @@ function _b64ToUint8(b64str){
 }
 
 function _vOpenOffice(driveId, fileName){
-  // Word/Excel/etc → Google Docs Viewer ou Drive preview
   const body=document.getElementById('viewerBody');
   body.classList.add('center');
   _vShowNav(false);
   if(driveId){
+    const ext=_vGetExt(fileName);
+    let src;
+    if(['xlsx','xls','docx','doc','pptx','odt','ods','csv'].includes(ext)){
+      // Google Docs Viewer — fonctionne sur mobile/tablette pour les fichiers Office
+      src='https://docs.google.com/viewer?srcid='+driveId+'&pid=explorer&efh=false&a=v&chrome=false&embedded=true';
+    } else {
+      // Drive preview pour les autres formats
+      src='https://drive.google.com/file/d/'+driveId+'/preview';
+    }
     const iframe=document.createElement('iframe');
-    iframe.src='https://drive.google.com/file/d/'+driveId+'/preview';
+    iframe.src=src;
     iframe.style.cssText='width:100%;height:100%;border:none;border-radius:8px;background:#fff';
+
     body.innerHTML='';
     body.appendChild(iframe);
   } else {
