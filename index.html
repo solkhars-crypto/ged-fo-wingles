@@ -1283,127 +1283,30 @@ function init() {
     fiches=JSON.parse(localStorage.getItem('fo_fiches')||'[]');
   } catch(e){ docs=[]; meetings=[]; fiches=[]; }
   renderAll(); go('dashboard');
-  if(gClientId) startGIS(); else { setSyncStatus('offline','Configurer Drive'); showConnectBanner(); }
+  if(gClientId) startGIS(); else setSyncStatus('offline','Cliquer pour configurer Drive');
   document.getElementById('ff-skill-input').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); addSkillTag(this.value.trim()); this.value=''; } });
 }
 
-// ─── OAuth Google Drive ─────────────────────────────
-// Stratégie : charger GIS en préchargement, connecter uniquement sur clic utilisateur
-
 function startGIS() {
-  // Token valide en cache ?
-  const cached = localStorage.getItem('fo_tok');
-  const exp    = parseInt(localStorage.getItem('fo_tok_exp') || '0');
-  if (cached && Date.now() < exp - 60000) {
-    accessToken = cached;
-    tokenExpiry = exp;
-    // Charger GIS en arrière-plan pour les futures opérations Drive
-    _loadGIS().then(() => onDriveConnected()).catch(() => {
-      // GIS indisponible mais token valide — on essaie quand même
-      onDriveConnected();
-    });
-    return;
-  }
-  // Pas de token → charger GIS en fond, afficher bouton connexion
-  setSyncStatus('offline', 'Cliquer pour connecter Drive');
-  _loadGIS().then(() => showConnectBanner()).catch(() => {
-    setSyncStatus('offline', 'Erreur réseau Google');
-  });
+  setSyncStatus('connecting','Connexion...');
+  if(window.google&&google.accounts){ initTokenClient(); return; }
+  if(document.getElementById('gis-s')) return;
+  const s=document.createElement('script'); s.id='gis-s'; s.src='https://accounts.google.com/gsi/client';
+  s.onload=initTokenClient; s.onerror=()=>setSyncStatus('offline','Erreur chargement');
+  document.body.appendChild(s);
 }
-
-// Charge le script GIS et retourne une Promise
-function _loadGIS() {
-  return new Promise((resolve, reject) => {
-    if (window.google && google.accounts && google.accounts.oauth2) { resolve(); return; }
-    if (document.getElementById('gis-s')) {
-      // Déjà en cours — attendre max 10s
-      let tries = 0;
-      const wait = setInterval(() => {
-        if (window.google && google.accounts && google.accounts.oauth2) { clearInterval(wait); resolve(); }
-        else if (++tries > 100) { clearInterval(wait); reject(new Error('GIS timeout')); }
-      }, 100);
-      return;
-    }
-    const s = document.createElement('script');
-    s.id = 'gis-s';
-    s.src = 'https://accounts.google.com/gsi/client';
-    s.onload = resolve;
-    s.onerror = reject;
-    document.body.appendChild(s);
-  });
+function initTokenClient() {
+  const cached=localStorage.getItem('fo_tok'); const exp=parseInt(localStorage.getItem('fo_tok_exp')||'0');
+  if(cached&&Date.now()<exp-60000){ accessToken=cached; onDriveConnected(); return; }
+  requestNewToken(false);
 }
-
-// Connexion interactive — appelée UNIQUEMENT sur action utilisateur (clic)
-function requestNewToken() {
-  _loadGIS().then(() => {
-    const client = google.accounts.oauth2.initTokenClient({
-      client_id: gClientId,
-      scope: 'https://www.googleapis.com/auth/drive.file',
-      callback: (r) => {
-        if (r.error) {
-          setSyncStatus('offline', 'Connexion annulée');
-          toast('Connexion Google annulée', 'e');
-          showConnectBanner();
-          return;
-        }
-        hideConnectBanner();
-        accessToken = r.access_token;
-        tokenExpiry = Date.now() + (r.expires_in * 1000);
-        localStorage.setItem('fo_tok', accessToken);
-        localStorage.setItem('fo_tok_exp', tokenExpiry);
-        onDriveConnected();
-      }
-    });
-    client.requestAccessToken({ prompt: 'select_account' });
-  }).catch(() => toast('Impossible de charger Google — vérifier la connexion', 'e'));
+function requestNewToken(interactive) {
+  const client=google.accounts.oauth2.initTokenClient({client_id:gClientId,scope:'https://www.googleapis.com/auth/drive.file',
+    callback:(r)=>{ if(r.error){ setSyncStatus('offline','Non connecté'); if(interactive) toast('Connexion annulée','e'); return; }
+      accessToken=r.access_token; tokenExpiry=Date.now()+(r.expires_in*1000);
+      localStorage.setItem('fo_tok',accessToken); localStorage.setItem('fo_tok_exp',tokenExpiry); onDriveConnected(); }});
+  client.requestAccessToken({prompt:interactive?'consent':'none'});
 }
-
-// Renouvellement token en arrière-plan (pendant une opération Drive)
-function _renewToken() {
-  return new Promise((resolve) => {
-    if (!window.google || !google.accounts || !google.accounts.oauth2) { resolve(false); return; }
-    const timer = setTimeout(() => resolve(false), 5000);
-    const client = google.accounts.oauth2.initTokenClient({
-      client_id: gClientId,
-      scope: 'https://www.googleapis.com/auth/drive.file',
-      callback: (res) => {
-        clearTimeout(timer);
-        if (!res.error) {
-          accessToken = res.access_token;
-          tokenExpiry = Date.now() + (res.expires_in * 1000);
-          localStorage.setItem('fo_tok', accessToken);
-          localStorage.setItem('fo_tok_exp', tokenExpiry);
-          resolve(true);
-        } else {
-          driveConnected = false;
-          setSyncStatus('offline', 'Session expirée — cliquer pour reconnecter');
-          showConnectBanner();
-          resolve(false);
-        }
-      }
-    });
-    client.requestAccessToken({ prompt: 'none' });
-  });
-}
-
-function showConnectBanner() {
-  let b = document.getElementById('connect-banner');
-  if (!b) {
-    b = document.createElement('div');
-    b.id = 'connect-banner';
-    b.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#E63946,#C1121F);color:#fff;padding:14px 22px;border-radius:12px;z-index:800;display:flex;align-items:center;gap:14px;box-shadow:0 8px 32px rgba(230,57,70,.5);font-family:"Instrument Sans",sans-serif;font-size:13px;font-weight:600;white-space:nowrap;';
-    b.innerHTML = '<span style="font-size:18px">☁</span><span>Connecter Google Drive pour synchroniser</span><button onclick="requestNewToken();hideConnectBanner()" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;padding:7px 16px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit">Se connecter</button><button onclick="hideConnectBanner()" style="background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:18px;padding:0 4px">×</button>';
-    document.body.appendChild(b);
-  }
-  b.style.display = 'flex';
-}
-
-function hideConnectBanner() {
-  const b = document.getElementById('connect-banner');
-  if (b) b.style.display = 'none';
-}
-
-
 async function onDriveConnected() {
   driveConnected=true; setSyncStatus('online','Drive connecté'); toast('Google Drive connecté','s');
   // Charger le cache local en premier — affichage immédiat
@@ -1416,7 +1319,7 @@ async function onDriveConnected() {
   catch(e) { console.warn('Drive timeout/erreur:', e.message); toast('Drive inaccessible — données locales chargées','i'); }
   hideLoading(); renderAll();
 }
-function handleSyncBtn() { if(driveConnected) syncAll(); else if(gClientId) requestNewToken(); else openModal('setupModal'); }
+function handleSyncBtn() { if(driveConnected) syncAll(); else if(gClientId) requestNewToken(true); else openModal('setupModal'); }
 function setSyncStatus(state,label) {
   const btn=document.getElementById('syncBtn');
   btn.className='sync-pill '+state;
@@ -1425,21 +1328,22 @@ function setSyncStatus(state,label) {
   if(dot){ dot.className='sb-dot'+(state==='online'?' online':state==='connecting'?' connecting':''); dot.title=state==='online'?'Drive connecté':state==='connecting'?'Connexion…':'Non connecté'; }
 }
 async function driveReq(url,opts={}) {
-  // Token expiré → tenter renouvellement silencieux
-  if (Date.now() > tokenExpiry - 60000) {
-    await _renewToken();
+  // Renouvellement token avec timeout 5s — si ça bloque, on continue avec le token actuel
+  if(Date.now()>tokenExpiry-60000){
+    await Promise.race([
+      new Promise(r=>{ const c=google.accounts.oauth2.initTokenClient({client_id:gClientId,scope:'https://www.googleapis.com/auth/drive.file',callback:(res)=>{ if(!res.error){ accessToken=res.access_token; tokenExpiry=Date.now()+(res.expires_in*1000); localStorage.setItem('fo_tok',accessToken); localStorage.setItem('fo_tok_exp',tokenExpiry); } r(); }}); c.requestAccessToken({prompt:'none'}); }),
+      new Promise(r=>setTimeout(r,5000)) // timeout 5s — ne pas bloquer
+    ]);
   }
-  if (!accessToken) throw new Error('Pas de token disponible');
-  opts.headers = { ...(opts.headers || {}), Authorization: 'Bearer ' + accessToken };
-  const ctrl = new AbortController();
-  const tid  = setTimeout(() => ctrl.abort(), 10000);
+  if(!accessToken) throw new Error('Pas de token disponible');
+  opts.headers={...(opts.headers||{}),Authorization:'Bearer '+accessToken};
+  const ctrl=new AbortController();
+  const tid=setTimeout(()=>ctrl.abort(),10000); // timeout requête 10s
   try {
-    const res = await fetch(url, { ...opts, signal: ctrl.signal });
-    clearTimeout(tid);
-    return res;
-  } catch(e) { clearTimeout(tid); throw e; }
+    const res=await fetch(url,{...opts,signal:ctrl.signal});
+    clearTimeout(tid); return res;
+  } catch(e){ clearTimeout(tid); throw e; }
 }
-
 async function loadFromDrive() {
   // Lance sans try/catch — les erreurs remontent vers onDriveConnected qui gère le fallback
   if(!DATA_FILE_ID){
@@ -1800,7 +1704,6 @@ window.deleteFiche=deleteFiche; window.editFiche=editFiche; window.setFFCat=setF
 window.filterFiches=filterFiches; window.removeSkillTag=removeSkillTag; window.resetFFForm=resetFFForm;
 window.toggleGroup=toggleGroup; window.toggleSbGroup=toggleSbGroup;
 window.handleFFFile=handleFFFile; window.clearFFFile=clearFFFile; window.viewFFFile=viewFFFile;
-window.showConnectBanner=showConnectBanner; window.hideConnectBanner=hideConnectBanner; window.requestNewToken=requestNewToken;
 
 init();
 </script>
