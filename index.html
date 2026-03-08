@@ -1924,15 +1924,19 @@ async function _vRenderAllPages(){
   }
   body.innerHTML='';
   frags.forEach(el=>body.appendChild(el));
-  // Scroll vers la page courante si navigation par flèches
+  // Scroll : page 1 = retour en haut, autres pages = scroll vers la bonne page
   const pages=body.querySelectorAll('.viewer-canvas-wrap');
-  if(pages[vCurPage-1]) pages[vCurPage-1].scrollIntoView({behavior:'smooth',block:'start'});
+  if(vCurPage===1){
+    body.scrollTop=0;
+  } else if(pages[vCurPage-1]){
+    body.scrollTop=pages[vCurPage-1].offsetTop;
+  }
   _vUpdateNav();
 }
 
 async function _vOpenPdf(dataOrUrl, isUrl){
   const body=document.getElementById('viewerBody');
-  body.classList.add('center');
+  body.classList.remove('center');
   body.innerHTML='<div class="pdf-loading"><div class="spinner"></div><span>Chargement du PDF…</span></div>';
   _vShowNav(true);
   try {
