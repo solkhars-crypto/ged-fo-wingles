@@ -6,6 +6,7 @@
 <title>GED Force Ouvrière — O-I Wingles</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 /* ══════════════════════════════════════
    RESET & TOKENS
@@ -760,15 +761,34 @@ body {
 /* ══════════════════════════════════════
    VIEWER
 ══════════════════════════════════════ */
-.viewer-ov { display:none;position:fixed;inset:0;background:rgba(0,0,0,.96);backdrop-filter:blur(16px);z-index:500;flex-direction:column; }
+.viewer-ov { display:none;position:fixed;inset:0;background:rgba(0,0,0,.97);backdrop-filter:blur(20px);z-index:500;flex-direction:column; }
 .viewer-ov.open { display:flex; }
-.viewer-hdr { display:flex;align-items:center;gap:14px;padding:14px 24px;background:rgba(13,15,20,.97);border-bottom:1px solid var(--border);flex-shrink:0; }
-.viewer-title strong { font-family:var(--font-d);font-size:16px;letter-spacing:1.5px;color:var(--text);display:block; }
+.viewer-hdr { display:flex;align-items:center;gap:14px;padding:12px 20px;background:rgba(13,15,20,.98);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;gap:10px; }
+.viewer-title strong { font-family:var(--font-d);font-size:15px;letter-spacing:1.5px;color:var(--text);display:block; }
 .viewer-title span { font-size:10px;color:var(--muted);font-family:var(--font-m); }
-.viewer-body { flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:20px; }
-.viewer-body iframe { width:100%;height:100%;border:none;border-radius:8px;background:#fff; }
-.viewer-body img { max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.5); }
-.no-preview { text-align:center;color:var(--muted); }
+/* Barre de navigation PDF */
+.viewer-nav { display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:12px;color:var(--muted); }
+.viewer-nav button { background:none;border:none;color:var(--text);cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px;transition:background .15s; }
+.viewer-nav button:hover { background:rgba(255,255,255,.1); }
+.viewer-nav button:disabled { opacity:.25;cursor:default; }
+.viewer-nav span { font-family:var(--font-m);font-size:11px;color:var(--muted);min-width:70px;text-align:center; }
+/* Zoom */
+.viewer-zoom { display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:4px 8px; }
+.viewer-zoom button { background:none;border:none;color:var(--text);cursor:pointer;font-size:15px;padding:1px 5px;border-radius:4px;transition:background .15s; }
+.viewer-zoom button:hover { background:rgba(255,255,255,.1); }
+.viewer-zoom span { font-family:var(--font-m);font-size:11px;color:var(--muted);min-width:38px;text-align:center; }
+/* Corps viewer */
+.viewer-body { flex:1;overflow:auto;display:flex;flex-direction:column;align-items:center;padding:20px;gap:12px;background:var(--bg); }
+.viewer-body.center { justify-content:center; }
+.viewer-canvas-wrap { position:relative;box-shadow:0 8px 40px rgba(0,0,0,.6);border-radius:4px;overflow:hidden; }
+.viewer-canvas-wrap canvas { display:block; }
+.viewer-body iframe { width:100%;height:100%;border:none;border-radius:8px;background:#fff;flex-shrink:0; }
+.viewer-body img { max-width:min(100%,900px);object-fit:contain;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.5); }
+.viewer-page-label { font-family:var(--font-m);font-size:10px;color:rgba(255,255,255,.2);margin-top:2px;margin-bottom:8px; }
+.no-preview { text-align:center;color:var(--muted);padding:40px; }
+.no-preview .np-ico { font-size:56px;margin-bottom:14px; }
+/* Loader PDF */
+.pdf-loading { display:flex;flex-direction:column;align-items:center;gap:14px;color:var(--muted);font-size:13px;padding:60px; }
 
 /* ══════════════════════════════════════
    LOADING & TOAST
@@ -1076,17 +1096,32 @@ body {
 <!-- VIEWER -->
 <div class="viewer-ov" id="viewerOv">
   <div class="viewer-hdr">
-    <div class="sb-logo-mark" style="width:34px;height:34px;font-size:12px">FO</div>
-    <div class="viewer-title" style="flex:1">
+    <div class="sb-logo-mark" style="width:34px;height:34px;font-size:12px;flex-shrink:0">FO</div>
+    <div class="viewer-title" style="flex:1;min-width:0">
       <strong id="viewerTitle">—</strong>
       <span id="viewerCode">—</span>
     </div>
-    <div style="display:flex;gap:8px">
+    <!-- Nav PDF (masquée par défaut) -->
+    <div class="viewer-nav" id="viewerNav" style="display:none">
+      <button id="vNavFirst" onclick="vGoPage(1)" title="Première page">⏮</button>
+      <button id="vNavPrev" onclick="vGoPage(vCurPage-1)" title="Page précédente">‹</button>
+      <span id="vNavLabel">— / —</span>
+      <button id="vNavNext" onclick="vGoPage(vCurPage+1)" title="Page suivante">›</button>
+      <button id="vNavLast" onclick="vGoPage(vTotalPages)" title="Dernière page">⏭</button>
+    </div>
+    <!-- Zoom PDF (masqué par défaut) -->
+    <div class="viewer-zoom" id="viewerZoom" style="display:none">
+      <button onclick="vZoom(-0.2)" title="Dézoomer">−</button>
+      <span id="vZoomLabel">100%</span>
+      <button onclick="vZoom(0.2)" title="Zoomer">+</button>
+      <button onclick="vZoomFit()" title="Ajuster à l'écran" style="font-size:11px">↔</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-shrink:0">
       <button class="btn btn-secondary" id="viewerDlBtn">↓ Télécharger</button>
       <button class="btn btn-secondary" onclick="closeViewer()">✕ Fermer</button>
     </div>
   </div>
-  <div class="viewer-body" id="viewerBody"></div>
+  <div class="viewer-body center" id="viewerBody"></div>
 </div>
 
 <!-- MODAL NOUVEAU DOC -->
@@ -1485,18 +1520,178 @@ async function deleteDoc(docId,instId,filter) {
   docs=docs.filter(d=>d.id!==docId); await saveToDrive(); renderDocRows(instId,curFilter[instId]||'all'); renderStats(); renderDashCards(); toast('Document supprimé','i');
 }
 function downloadDoc(docId) { const doc=docs.find(d=>d.id===docId); if(!doc||!doc.fileData){ toast('Aucun fichier attaché','i'); return; } const a=document.createElement('a'); a.href=doc.fileData; a.download=doc.fileName||doc.title; a.click(); }
+// ─── VIEWER MULTI-PAGES ──────────────────────────────────────────────────────
+let vCurPage=1, vTotalPages=0, vPdfDoc=null, vScale=1.2, vRenderTask=null;
+
+function _vShowNav(show){
+  document.getElementById('viewerNav').style.display=show?'flex':'none';
+  document.getElementById('viewerZoom').style.display=show?'flex':'none';
+}
+function _vUpdateNav(){
+  document.getElementById('vNavLabel').textContent=vCurPage+' / '+vTotalPages;
+  document.getElementById('vNavPrev').disabled=(vCurPage<=1);
+  document.getElementById('vNavFirst').disabled=(vCurPage<=1);
+  document.getElementById('vNavNext').disabled=(vCurPage>=vTotalPages);
+  document.getElementById('vNavLast').disabled=(vCurPage>=vTotalPages);
+  document.getElementById('vZoomLabel').textContent=Math.round(vScale*100)+'%';
+}
+function vGoPage(n){
+  if(!vPdfDoc) return;
+  n=Math.max(1,Math.min(vTotalPages,n));
+  vCurPage=n; _vRenderAllPages();
+}
+function vZoom(delta){
+  vScale=Math.max(0.4,Math.min(3.0,vScale+delta));
+  _vRenderAllPages();
+}
+function vZoomFit(){
+  const body=document.getElementById('viewerBody');
+  const w=body.clientWidth-40;
+  if(vPdfDoc){ vPdfDoc.getPage(1).then(p=>{ const vp=p.getViewport({scale:1}); vScale=Math.min(w/vp.width,1.8); _vRenderAllPages(); }); }
+}
+
+// Rendu de TOUTES les pages verticalement (scroll continu)
+async function _vRenderAllPages(){
+  if(!vPdfDoc) return;
+  const body=document.getElementById('viewerBody');
+  body.classList.remove('center');
+  body.innerHTML='<div class="pdf-loading"><div class="spinner"></div><span>Rendu en cours…</span></div>';
+  _vUpdateNav();
+  // Petite pause pour que le spinner s'affiche
+  await new Promise(r=>setTimeout(r,30));
+  const frags=[];
+  for(let i=1;i<=vTotalPages;i++){
+    const page=await vPdfDoc.getPage(i);
+    const vp=page.getViewport({scale:vScale});
+    const wrap=document.createElement('div');
+    wrap.className='viewer-canvas-wrap';
+    const canvas=document.createElement('canvas');
+    canvas.width=vp.width; canvas.height=vp.height;
+    wrap.appendChild(canvas);
+    const lbl=document.createElement('div');
+    lbl.className='viewer-page-label';
+    lbl.textContent='Page '+i+' / '+vTotalPages;
+    wrap.appendChild(lbl);
+    frags.push(wrap);
+    // Render immédiat
+    await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+  }
+  body.innerHTML='';
+  frags.forEach(el=>body.appendChild(el));
+  // Scroll vers la page courante si navigation par flèches
+  const pages=body.querySelectorAll('.viewer-canvas-wrap');
+  if(pages[vCurPage-1]) pages[vCurPage-1].scrollIntoView({behavior:'smooth',block:'start'});
+  _vUpdateNav();
+}
+
+async function _vOpenPdf(dataOrUrl, isUrl){
+  const body=document.getElementById('viewerBody');
+  body.classList.add('center');
+  body.innerHTML='<div class="pdf-loading"><div class="spinner"></div><span>Chargement du PDF…</span></div>';
+  _vShowNav(true);
+  try {
+    if(typeof pdfjsLib==='undefined') throw new Error('PDF.js non chargé');
+    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const src=isUrl?dataOrUrl:{data:_b64ToUint8(dataOrUrl)};
+    vPdfDoc=await pdfjsLib.getDocument(src).promise;
+    vTotalPages=vPdfDoc.numPages;
+    vCurPage=1;
+    vScale=1.2;
+    await _vRenderAllPages();
+  } catch(e){
+    console.error('PDF error:',e);
+    body.innerHTML='<div class="no-preview"><div class="np-ico">📄</div><p>Impossible d\'afficher ce PDF.</p><p style="font-size:11px;margin-top:8px">Utilisez le bouton T\u00e9l\u00e9charger.</p></div>';
+    _vShowNav(false);
+  }
+}
+
+function _b64ToUint8(b64str){
+  const base64=b64str.split(',')[1]||b64str;
+  const bin=atob(base64);
+  const arr=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+  return arr;
+}
+
+function _vOpenOffice(driveId, fileName){
+  // Word/Excel/etc → Google Docs Viewer ou Drive preview
+  const body=document.getElementById('viewerBody');
+  body.classList.add('center');
+  _vShowNav(false);
+  if(driveId){
+    const iframe=document.createElement('iframe');
+    iframe.src='https://drive.google.com/file/d/'+driveId+'/preview';
+    iframe.style.cssText='width:100%;height:100%;border:none;border-radius:8px;background:#fff';
+    body.innerHTML='';
+    body.appendChild(iframe);
+  } else {
+    body.innerHTML='<div class="no-preview"><div class="np-ico">📝</div><p style="color:var(--text)">'+fileName+'</p><p>Ce format ne peut pas être prévisualisé sans Drive.</p><p style="font-size:11px;margin-top:8px">Utilisez le bouton Télécharger.</p></div>';
+  }
+}
+
+function _vOpenImage(src){
+  const body=document.getElementById('viewerBody');
+  body.classList.add('center');
+  body.innerHTML='';
+  _vShowNav(false);
+  const img=document.createElement('img');
+  img.src=src;
+  img.style.cssText='max-width:min(100%,900px);object-fit:contain;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.5)';
+  body.appendChild(img);
+}
+
+function _vGetMime(dataUri){ return (dataUri.split(';')[0].split(':')[1])||''; }
+function _vGetExt(fileName){ return (fileName||'').split('.').pop().toLowerCase(); }
+
+function _vDispatch(fileData, fileName, driveId){
+  const body=document.getElementById('viewerBody');
+  body.innerHTML='';
+  vPdfDoc=null;
+
+  if(fileData){
+    const mime=_vGetMime(fileData);
+    const ext=_vGetExt(fileName);
+    if(mime==='application/pdf'||ext==='pdf'){
+      _vOpenPdf(fileData, false);
+    } else if(mime.startsWith('image/')||['jpg','jpeg','png','gif','webp'].includes(ext)){
+      _vOpenImage(fileData);
+    } else if(['docx','doc','xlsx','xls','pptx','odt','ods'].includes(ext)){
+      _vOpenOffice(driveId, fileName);
+    } else {
+      _vShowNav(false);
+      body.classList.add('center');
+      body.innerHTML='<div class="no-preview"><div class="np-ico">📄</div><p style="color:var(--text)">'+(fileName||'Fichier')+'</p><p>Utilisez le bouton Télécharger pour ouvrir ce fichier.</p></div>';
+    }
+  } else if(driveId){
+    // Pas de données locales mais on a l'ID Drive → prévisualisation Drive
+    const ext=_vGetExt(fileName);
+    if(ext==='pdf'){
+      _vOpenPdf('https://drive.google.com/file/d/'+driveId+'/view', true);
+    } else {
+      _vOpenOffice(driveId, fileName);
+    }
+  } else {
+    _vShowNav(false);
+    body.classList.add('center');
+    body.innerHTML='<div class="no-preview"><div class="np-ico">📋</div><p>Aucun fichier attaché à ce document.</p></div>';
+  }
+}
+
 function viewDoc(docId) {
   const doc=docs.find(d=>d.id===docId); if(!doc) return;
   document.getElementById('viewerTitle').textContent=doc.title;
   document.getElementById('viewerCode').textContent=genCode(doc)+' · '+fmtDate(doc.date);
   document.getElementById('viewerDlBtn').onclick=()=>downloadDoc(docId);
-  const body=document.getElementById('viewerBody'); body.innerHTML='';
-  if(doc.fileData){ const mime=doc.fileData.split(';')[0].split(':')[1]||''; if(mime==='application/pdf'){ const iframe=document.createElement('iframe'); iframe.src=doc.fileData; body.appendChild(iframe); } else if(mime.startsWith('image/')){ const img=document.createElement('img'); img.src=doc.fileData; body.appendChild(img); } else if(doc.driveId){ const iframe=document.createElement('iframe'); iframe.src=`https://drive.google.com/file/d/${doc.driveId}/preview`; body.appendChild(iframe); } else body.innerHTML=`<div class="no-preview"><div style="font-size:56px;margin-bottom:14px">📄</div><p style="color:var(--text)">${doc.fileName||doc.title}</p><p>Cliquez Télécharger pour ouvrir ce fichier.</p></div>`; }
-  else if(doc.driveId){ const iframe=document.createElement('iframe'); iframe.src=`https://drive.google.com/file/d/${doc.driveId}/preview`; body.appendChild(iframe); }
-  else body.innerHTML=`<div class="no-preview"><div style="font-size:56px;margin-bottom:14px">📋</div><p style="color:var(--text)">${doc.title}</p><p>Aucun fichier attaché.</p></div>`;
+  _vDispatch(doc.fileData||null, doc.fileName||doc.title, doc.driveId||null);
   document.getElementById('viewerOv').classList.add('open');
 }
-function closeViewer(){ document.getElementById('viewerOv').classList.remove('open'); document.getElementById('viewerBody').innerHTML=''; }
+
+function closeViewer(){
+  document.getElementById('viewerOv').classList.remove('open');
+  document.getElementById('viewerBody').innerHTML='';
+  vPdfDoc=null; vCurPage=1; vTotalPages=0;
+  _vShowNav(false);
+}
 
 function handleDrop(e,instId){ e.preventDefault(); document.getElementById('drop-'+instId).classList.remove('over'); Array.from(e.dataTransfer.files).forEach(f=>ingestFile(f,instId)); }
 function handleFileInput(e,instId){ Array.from(e.target.files).forEach(f=>ingestFile(f,instId)); }
@@ -1532,24 +1727,14 @@ function clearFFFile(){
   ffFileTemp=null; resetFFFile();
 }
 function viewFFFile(id){
-  const f=fiches.find(x=>x.id===id); if(!f||(f.fileData===null&&!f.driveFileId)) return;
+  const f=fiches.find(x=>x.id===id); if(!f||(f.fileData===undefined&&!f.driveFileId)) return;
   document.getElementById('viewerTitle').textContent=f.titre;
   document.getElementById('viewerCode').textContent=(f.fileName||'Pièce jointe')+' · '+(FF_CATS[f.categorie]?.l||f.categorie);
   document.getElementById('viewerDlBtn').onclick=()=>{
     if(f.fileData){ const a=document.createElement('a');a.href=f.fileData;a.download=f.fileName||f.titre;a.click(); }
     else if(f.driveFileId){ window.open('https://drive.google.com/file/d/'+f.driveFileId+'/view','_blank'); }
   };
-  const body=document.getElementById('viewerBody'); body.innerHTML='';
-  if(f.fileData){
-    const mime=f.fileData.split(';')[0].split(':')[1]||'';
-    if(mime==='application/pdf'){ const iframe=document.createElement('iframe'); iframe.src=f.fileData; body.appendChild(iframe); }
-    else if(mime.startsWith('image/')){ const img=document.createElement('img'); img.src=f.fileData; body.appendChild(img); }
-    else body.innerHTML='<div class="no-preview"><div style="font-size:56px;margin-bottom:14px">📄</div><p style="color:var(--text)">'+f.fileName+'</p></div>';
-  } else if(f.driveFileId){
-    const iframe=document.createElement('iframe');
-    iframe.src='https://drive.google.com/file/d/'+f.driveFileId+'/preview';
-    body.appendChild(iframe);
-  }
+  _vDispatch(f.fileData||null, f.fileName||f.titre, f.driveFileId||null);
   document.getElementById('viewerOv').classList.add('open');
 }
 function addSkillTag(val){ if(!val||ffSkillsTemp.includes(val)) return; ffSkillsTemp.push(val); renderSkillTags(); }
@@ -1801,6 +1986,7 @@ window.deleteFiche=deleteFiche; window.editFiche=editFiche; window.setFFCat=setF
 window.filterFiches=filterFiches; window.removeSkillTag=removeSkillTag; window.resetFFForm=resetFFForm;
 window.toggleGroup=toggleGroup; window.toggleSbGroup=toggleSbGroup;
 window.handleFFFile=handleFFFile; window.clearFFFile=clearFFFile; window.viewFFFile=viewFFFile;
+window.vGoPage=vGoPage; window.vZoom=vZoom; window.vZoomFit=vZoomFit;
 window.showConnectBanner=showConnectBanner; window.hideConnectBanner=hideConnectBanner; window.requestNewToken=requestNewToken;
 
 init();
