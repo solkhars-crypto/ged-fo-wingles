@@ -1169,70 +1169,87 @@ body {
 
 <!-- MODAL AVIS CSE -->
 <div class="modal-ov" id="avisModal">
-  <div class="modal" style="max-width:600px">
-    <h3 id="avisModalTitle">Nouvel avis CSE</h3>
+  <div class="modal" style="max-width:640px;width:95vw">
+    <h3 id="avisModalTitle" style="margin-bottom:20px;font-size:16px;font-weight:700;color:var(--text)">Nouvel avis CSE</h3>
     <input type="hidden" id="avis-edit-id">
-    <div class="form-row">
-      <div class="form-group" style="flex:2">
-        <label>Objet / Titre de l'avis *</label>
-        <input type="text" id="avis-titre" placeholder="Ex: Avis sur le plan de formation 2026">
-      </div>
-      <div class="form-group" style="flex:1">
-        <label>Date de la réunion *</label>
-        <input type="date" id="avis-date">
-      </div>
+
+    <!-- Titre -->
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Objet / Titre de l'avis *</label>
+      <input type="text" id="avis-titre" placeholder="Ex : Avis sur la mise en place des SEP / Line Leaders" style="width:100%;box-sizing:border-box">
     </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Type de réunion</label>
-        <select id="avis-type">
+
+    <!-- Date + Type -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div>
+        <label style="display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Date de la réunion *</label>
+        <input type="date" id="avis-date" style="width:100%;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Type de réunion</label>
+        <select id="avis-type" style="width:100%;box-sizing:border-box">
           <option value="ordinaire">CSE Ordinaire</option>
           <option value="extraordinaire">CSE Extraordinaire</option>
         </select>
       </div>
-      <div class="form-group">
-        <label>Avis rendu</label>
-        <select id="avis-rendu">
-          <option value="favorable">✅ Favorable</option>
-          <option value="defavorable">❌ Défavorable</option>
-          <option value="reserve">⚠️ Favorable avec réserves</option>
-          <option value="ajourne">⏸ Ajourné</option>
-        </select>
+    </div>
+
+    <!-- Avis rendu -->
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Avis rendu</label>
+      <select id="avis-rendu" style="width:100%;box-sizing:border-box">
+        <option value="favorable">✅ Favorable</option>
+        <option value="defavorable">❌ Défavorable</option>
+        <option value="reserve">⚠️ Favorable avec réserves</option>
+        <option value="ajourne">⏸ Ajourné</option>
+      </select>
+    </div>
+
+    <!-- Vote -->
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Résultat du vote</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div style="background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.25);border-radius:10px;padding:10px;text-align:center">
+          <div style="font-size:18px;margin-bottom:4px">✅</div>
+          <label style="font-size:10px;font-weight:700;color:#2ECC71;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">Pour</label>
+          <input type="number" id="avis-pour" min="0" value="0" style="text-align:center;width:100%;box-sizing:border-box;font-size:18px;font-weight:700;background:transparent;border:none;border-bottom:2px solid rgba(46,204,113,.4);border-radius:0;color:#2ECC71;padding:2px 0">
+        </div>
+        <div style="background:rgba(230,57,70,.08);border:1px solid rgba(230,57,70,.25);border-radius:10px;padding:10px;text-align:center">
+          <div style="font-size:18px;margin-bottom:4px">❌</div>
+          <label style="font-size:10px;font-weight:700;color:#E63946;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">Contre</label>
+          <input type="number" id="avis-contre" min="0" value="0" style="text-align:center;width:100%;box-sizing:border-box;font-size:18px;font-weight:700;background:transparent;border:none;border-bottom:2px solid rgba(230,57,70,.4);border-radius:0;color:#E63946;padding:2px 0">
+        </div>
+        <div style="background:rgba(244,185,66,.08);border:1px solid rgba(244,185,66,.25);border-radius:10px;padding:10px;text-align:center">
+          <div style="font-size:18px;margin-bottom:4px">🟡</div>
+          <label style="font-size:10px;font-weight:700;color:#F4B942;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">Abstention</label>
+          <input type="number" id="avis-abstention" min="0" value="0" style="text-align:center;width:100%;box-sizing:border-box;font-size:18px;font-weight:700;background:transparent;border:none;border-bottom:2px solid rgba(244,185,66,.4);border-radius:0;color:#F4B942;padding:2px 0">
+        </div>
       </div>
     </div>
-    <div class="form-row">
-      <div class="form-group" style="flex:1;text-align:center">
-        <label>✅ Pour</label>
-        <input type="number" id="avis-pour" min="0" value="0" style="text-align:center">
-      </div>
-      <div class="form-group" style="flex:1;text-align:center">
-        <label>❌ Contre</label>
-        <input type="number" id="avis-contre" min="0" value="0" style="text-align:center">
-      </div>
-      <div class="form-group" style="flex:1;text-align:center">
-        <label>🟡 Abstention</label>
-        <input type="number" id="avis-abstention" min="0" value="0" style="text-align:center">
-      </div>
+
+    <!-- Texte -->
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Texte de l'avis</label>
+      <textarea id="avis-texte" rows="5" placeholder="Rédigez ici le texte complet de l'avis rendu par le CSE…" style="width:100%;box-sizing:border-box;resize:vertical"></textarea>
     </div>
-    <div class="form-group">
-      <label>Texte de l'avis</label>
-      <textarea id="avis-texte" rows="4" placeholder="Rédigez ici le texte complet de l'avis rendu par le CSE…"></textarea>
-    </div>
-    <div class="form-group">
-      <label>Fichier joint (PDF signé, Word…)</label>
+
+    <!-- Fichier -->
+    <div style="margin-bottom:18px">
+      <label style="display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Fichier joint (PDF signé, Word…)</label>
       <div class="ff-file-zone" id="avis-file-zone" onclick="document.getElementById('avis-file-input').click()">
         <span class="ff-file-icon" id="avis-file-icon">📎</span>
-        <div>
-          <div class="ff-file-name" id="avis-file-name">Cliquez pour joindre l'avis officiel</div>
+        <div style="flex:1">
+          <div class="ff-file-name" id="avis-file-name">Cliquez pour joindre un fichier</div>
           <div class="ff-file-sub" id="avis-file-sub">PDF, Word — max 10 Mo</div>
         </div>
-        <button type="button" id="avis-file-clear" style="display:none;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px" onclick="event.stopPropagation();clearAvisFile()">×</button>
+        <button type="button" id="avis-file-clear" style="display:none;background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;padding:0 4px" onclick="event.stopPropagation();clearAvisFile()">×</button>
         <input type="file" id="avis-file-input" style="display:none" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onchange="handleAvisFile(this)">
       </div>
     </div>
+
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('avisModal');resetAvisForm()">Annuler</button>
-      <button class="btn btn-primary" onclick="saveAvis()">Enregistrer l'avis</button>
+      <button class="btn btn-primary" onclick="saveAvis()">💾 Enregistrer l'avis</button>
     </div>
   </div>
 </div>
@@ -1265,7 +1282,7 @@ body {
       <button class="btn btn-secondary" onclick="closeViewer()">✕ Fermer</button>
     </div>
   </div>
-  <div class="viewer-body center" id="viewerBody"></div>
+  <div class="viewer-body" id="viewerBody"></div>
 </div>
 
 <!-- MODAL NOUVEAU DOC -->
