@@ -1613,7 +1613,7 @@ function _b64ToUint8(b64str){
   return arr;
 }
 
-function _vOpenOffice(driveId, fileName){
+function _vOpenOffice(driveId, fileName, fileData){
   const body=document.getElementById('viewerBody');
   body.classList.add('center');
   _vShowNav(false);
@@ -1665,7 +1665,7 @@ function _vDispatch(fileData, fileName, driveId){
     } else if(mime.startsWith('image/')||['jpg','jpeg','png','gif','webp'].includes(ext)){
       _vOpenImage(fileData);
     } else if(['docx','doc','xlsx','xls','pptx','odt','ods'].includes(ext)){
-      _vOpenOffice(driveId, fileName);
+      _vOpenOffice(driveId, fileName, fileData);
     } else {
       _vShowNav(false);
       body.classList.add('center');
@@ -1677,7 +1677,7 @@ function _vDispatch(fileData, fileName, driveId){
     if(ext==='pdf'){
       _vOpenPdf('https://drive.google.com/file/d/'+driveId+'/view', true);
     } else {
-      _vOpenOffice(driveId, fileName);
+      _vOpenOffice(driveId, fileName, fileData);
     }
   } else {
     _vShowNav(false);
