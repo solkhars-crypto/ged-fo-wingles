@@ -1452,15 +1452,24 @@ function clearFFFile(){
   ffFileTemp=null; resetFFFile();
 }
 function viewFFFile(id){
-  const f=fiches.find(x=>x.id===id); if(!f||!f.fileData) return;
+  const f=fiches.find(x=>x.id===id); if(!f||(f.fileData===null&&!f.driveFileId)) return;
   document.getElementById('viewerTitle').textContent=f.titre;
-  document.getElementById('viewerCode').textContent=(f.fileName||'Pièce jointe')+' · '+f.categorie;
-  document.getElementById('viewerDlBtn').onclick=()=>{const a=document.createElement('a');a.href=f.fileData;a.download=f.fileName||f.titre;a.click();};
+  document.getElementById('viewerCode').textContent=(f.fileName||'Pièce jointe')+' · '+(FF_CATS[f.categorie]?.l||f.categorie);
+  document.getElementById('viewerDlBtn').onclick=()=>{
+    if(f.fileData){ const a=document.createElement('a');a.href=f.fileData;a.download=f.fileName||f.titre;a.click(); }
+    else if(f.driveFileId){ window.open('https://drive.google.com/file/d/'+f.driveFileId+'/view','_blank'); }
+  };
   const body=document.getElementById('viewerBody'); body.innerHTML='';
-  const mime=f.fileData.split(';')[0].split(':')[1]||'';
-  if(mime==='application/pdf'){ const iframe=document.createElement('iframe'); iframe.src=f.fileData; body.appendChild(iframe); }
-  else if(mime.startsWith('image/')){ const img=document.createElement('img'); img.src=f.fileData; body.appendChild(img); }
-  else body.innerHTML=`<div class="no-preview"><div style="font-size:56px;margin-bottom:14px">📄</div><p style="color:var(--text)">${f.fileName||f.titre}</p><p style="margin-top:8px"><button class="btn btn-primary" onclick="const a=document.createElement('a');a.href='${f.fileData}';a.download='${f.fileName||f.titre}';a.click()">↓ Télécharger</button></p></div>`;
+  if(f.fileData){
+    const mime=f.fileData.split(';')[0].split(':')[1]||'';
+    if(mime==='application/pdf'){ const iframe=document.createElement('iframe'); iframe.src=f.fileData; body.appendChild(iframe); }
+    else if(mime.startsWith('image/')){ const img=document.createElement('img'); img.src=f.fileData; body.appendChild(img); }
+    else body.innerHTML='<div class="no-preview"><div style="font-size:56px;margin-bottom:14px">📄</div><p style="color:var(--text)">'+f.fileName+'</p></div>';
+  } else if(f.driveFileId){
+    const iframe=document.createElement('iframe');
+    iframe.src='https://drive.google.com/file/d/'+f.driveFileId+'/preview';
+    body.appendChild(iframe);
+  }
   document.getElementById('viewerOv').classList.add('open');
 }
 function addSkillTag(val){ if(!val||ffSkillsTemp.includes(val)) return; ffSkillsTemp.push(val); renderSkillTags(); }
@@ -1471,8 +1480,77 @@ function editFiche(id){ const f=fiches.find(x=>x.id===id); if(!f) return; docume
   // Fichier joint existant
   if(f.fileData){ ffFileTemp={data:f.fileData,name:f.fileName||'Fichier joint',size:0,ext:(f.fileName||'').split('.').pop()}; const ext=ffFileTemp.ext.toLowerCase(); const icons={pdf:'📄',docx:'📝',doc:'📝',xlsx:'📊',xls:'📊',png:'🖼️',jpg:'🖼️',jpeg:'🖼️'}; const zone=document.getElementById('ff-file-zone'); if(zone) zone.classList.add('has-file'); const nameEl=document.getElementById('ff-file-name'); if(nameEl) nameEl.textContent=f.fileName||'Fichier joint'; const subEl=document.getElementById('ff-file-sub'); if(subEl) subEl.textContent=(ext.toUpperCase()||'Fichier')+' · Fichier existant'; const iconEl=document.getElementById('ff-file-icon'); if(iconEl) iconEl.textContent=icons[ext]||'📄'; const clr=document.getElementById('ff-file-clear'); if(clr) clr.style.display=''; } else { resetFFFile(); }
   openModal('ffModal'); }
-function saveFiche(){ const titre=document.getElementById('ff-titre').value.trim(); if(!titre){ toast('Intitulé requis','e'); return; } const editId=document.getElementById('ff-edit-id').value; const existingFiche=editId?fiches.find(x=>x.id===editId):null; const f={id:editId||Date.now().toString(),titre,code:document.getElementById('ff-code').value.trim(),categorie:document.getElementById('ff-categorie').value,service:document.getElementById('ff-service').value.trim(),coeff:document.getElementById('ff-coeff').value.trim(),convention:document.getElementById('ff-convention').value.trim(),mission:document.getElementById('ff-mission').value.trim(),activites:document.getElementById('ff-activites').value.trim(),skills:[...ffSkillsTemp],formation:document.getElementById('ff-formation').value.trim(),experience:document.getElementById('ff-experience').value.trim(),conditions:document.getElementById('ff-conditions').value.trim(),notes:document.getElementById('ff-notes').value.trim(),fileData:ffFileTemp?ffFileTemp.data:(existingFiche?existingFiche.fileData:null),fileName:ffFileTemp?ffFileTemp.name:(existingFiche?existingFiche.fileName:null),createdAt:editId?(existingFiche?.createdAt||new Date().toISOString()):new Date().toISOString(),updatedAt:new Date().toISOString()}; if(editId){ const idx=fiches.findIndex(x=>x.id===editId); if(idx>=0) fiches[idx]=f; else fiches.push(f); } else fiches.push(f); saveToDrive(); closeModal('ffModal'); resetFFForm(); renderFiches(); updateFFCount(); toast(`Fiche "${f.titre}" enregistrée`,'s'); }
-function deleteFiche(id){ if(!confirm('Supprimer cette fiche ?')) return; fiches=fiches.filter(x=>x.id!==id); saveToDrive(); renderFiches(); updateFFCount(); toast('Fiche supprimée','i'); }
+async function saveFiche(){
+  const titre=document.getElementById('ff-titre').value.trim();
+  if(!titre){ toast('Intitulé requis','e'); return; }
+  const editId=document.getElementById('ff-edit-id').value;
+  const existingFiche=editId?fiches.find(x=>x.id===editId):null;
+
+  // Si nouveau fichier joint → supprimer l'ancien sur Drive si existait
+  if(ffFileTemp && existingFiche && existingFiche.driveFileId){
+    await deleteFileFromDrive(existingFiche.driveFileId);
+  }
+
+  const f={
+    id: editId||Date.now().toString(),
+    titre,
+    code: document.getElementById('ff-code').value.trim(),
+    categorie: document.getElementById('ff-categorie').value,
+    service: document.getElementById('ff-service').value.trim(),
+    coeff: document.getElementById('ff-coeff').value.trim(),
+    convention: document.getElementById('ff-convention').value.trim(),
+    mission: document.getElementById('ff-mission').value.trim(),
+    activites: document.getElementById('ff-activites').value.trim(),
+    skills: [...ffSkillsTemp],
+    formation: document.getElementById('ff-formation').value.trim(),
+    experience: document.getElementById('ff-experience').value.trim(),
+    conditions: document.getElementById('ff-conditions').value.trim(),
+    notes: document.getElementById('ff-notes').value.trim(),
+    // Fichier joint : nouveau ou conserver l'existant
+    fileData: ffFileTemp ? ffFileTemp.data : (existingFiche ? existingFiche.fileData : null),
+    fileName: ffFileTemp ? ffFileTemp.name : (existingFiche ? existingFiche.fileName : null),
+    driveFileId: ffFileTemp ? null : (existingFiche ? existingFiche.driveFileId : null),
+    createdAt: editId?(existingFiche?.createdAt||new Date().toISOString()):new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  if(editId){ const idx=fiches.findIndex(x=>x.id===editId); if(idx>=0) fiches[idx]=f; else fiches.push(f); }
+  else fiches.push(f);
+
+  closeModal('ffModal'); resetFFForm(); renderFiches(); updateFFCount();
+  toast(`Fiche "${f.titre}" enregistrée`,'s');
+
+  // Sauvegarder JSON d'abord
+  await saveToDrive();
+
+  // Uploader la pièce jointe sur Drive si nouveau fichier
+  if(ffFileTemp && driveConnected && f.fileData){
+    toast('Upload de la pièce jointe sur Drive…','i');
+    try {
+      const cat=FF_CATS[f.categorie]||FF_CATS.chaud;
+      const folderName=`Fiches de fonctions/${cat.l}`;
+      const driveFileId=await uploadFileToDrive(f.fileData, f.fileName, folderName);
+      if(driveFileId){
+        f.driveFileId=driveFileId;
+        f.fileData=null; // Libérer la mémoire base64 — le fichier est sur Drive
+        const idx=fiches.findIndex(x=>x.id===f.id); if(idx>=0) fiches[idx]=f;
+        await saveToDrive();
+        renderFiches(); // Rafraîchir pour afficher le lien Drive
+        toast(`Fiche "${f.titre}" — fichier uploadé sur Drive ✓`,'s');
+      }
+    } catch(e){
+      console.error('Upload fiche Drive:', e);
+      toast('Fichier conservé en local (erreur Drive)','i');
+    }
+  }
+}
+async function deleteFiche(id){
+  if(!confirm('Supprimer cette fiche ?')) return;
+  const f=fiches.find(x=>x.id===id);
+  if(f && f.driveFileId){ showLoading('Suppression Drive…'); await deleteFileFromDrive(f.driveFileId); hideLoading(); }
+  fiches=fiches.filter(x=>x.id!==id);
+  saveToDrive(); renderFiches(); updateFFCount(); toast('Fiche supprimée','i');
+}
 function updateFFCount(){ const el=document.getElementById('cnt-fonctions'); if(el) el.textContent=fiches.length; }
 
 function renderFFCatsBar(){
@@ -1511,16 +1589,7 @@ function renderFiches(query=''){
       <div class="ff-footer">
         <span class="ff-coeff">${f.coeff||'—'}</span>
         <div class="ff-acts">
-          ${f.fileData?`<button class="ibtn view" title="Voir la fiche officielle" onclick="viewFFFile('${f.id}')">📄</button>`:''}
-          <button class="ibtn" title="Modifier" onclick="editFiche('${f.id}')">✏️</button>
-          <button class="ibtn del" title="Supprimer" onclick="deleteFiche('${f.id}')">✕</button>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function saveMeeting(){ const date=document.getElementById('mDate').value; if(!date){ toast('Date requise','e'); return; } const start=document.getElementById('mStart').value; const end=document.getElementById('mEnd').value; let duration=''; if(start&&end){ const [sh,sm]=start.split(':').map(Number); const [eh,em]=end.split(':').map(Number); const mins=(eh*60+em)-(sh*60+sm); if(mins>0) duration=`${Math.floor(mins/60)}h${mins%60>0?mins%60+'min':''}`; } const linkedDocs=Array.from(document.getElementById('mDocs').selectedOptions).map(o=>o.value); const m={id:Date.now().toString(),instance:document.getElementById('mInstance').value,date,start,end,duration,location:document.getElementById('mLoc').value,notes:document.getElementById('mNotes').value,linkedDocs,createdAt:new Date().toISOString()}; meetings.push(m); saveToDrive(); closeModal('meetingModal'); clearMtgForm(); renderCal(); renderMeetings(); renderStats(); document.getElementById('cnt-agenda').textContent=meetings.length; toast('Réunion enregistrée','s'); }
+          ${(f.fileData||f.driveFileId)?`<button class="ibtn view" title="${f.driveFileId?'Drive ☁':'Fiche 📄'}" onclick="viewFFFile('${f.id}')">${f.driveFileId?'☁':'📄'}</button>`:''}`; } const linkedDocs=Array.from(document.getElementById('mDocs').selectedOptions).map(o=>o.value); const m={id:Date.now().toString(),instance:document.getElementById('mInstance').value,date,start,end,duration,location:document.getElementById('mLoc').value,notes:document.getElementById('mNotes').value,linkedDocs,createdAt:new Date().toISOString()}; meetings.push(m); saveToDrive(); closeModal('meetingModal'); clearMtgForm(); renderCal(); renderMeetings(); renderStats(); document.getElementById('cnt-agenda').textContent=meetings.length; toast('Réunion enregistrée','s'); }
 function deleteMeeting(id){ if(!confirm('Supprimer cette réunion ?')) return; meetings=meetings.filter(m=>m.id!==id); saveToDrive(); renderCal(); renderMeetings(); renderStats(); document.getElementById('cnt-agenda').textContent=meetings.length; toast('Réunion supprimée','i'); }
 function clearMtgForm(){ ['mLoc','mNotes'].forEach(id=>document.getElementById(id).value=''); document.getElementById('mDate').valueAsDate=new Date(); document.getElementById('mStart').value='09:00'; document.getElementById('mEnd').value='11:00'; }
 
