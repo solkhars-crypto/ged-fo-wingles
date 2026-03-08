@@ -1309,7 +1309,15 @@ function requestNewToken(interactive) {
 }
 async function onDriveConnected() {
   driveConnected=true; setSyncStatus('online','Drive connecté'); toast('Google Drive connecté','s');
-  showLoading('Chargement de vos données…'); await loadFromDrive(); hideLoading(); renderAll();
+  // Charger le cache local en premier — affichage immédiat
+  try { docs=JSON.parse(localStorage.getItem('fo_docs')||'[]'); meetings=JSON.parse(localStorage.getItem('fo_meetings')||'[]'); fiches=JSON.parse(localStorage.getItem('fo_fiches')||'[]'); } catch(e){}
+  renderAll();
+  // Puis synchroniser Drive avec timeout de sécurité (8s max)
+  showLoading('Synchronisation Drive…');
+  const timeoutP = new Promise((_,rej) => setTimeout(() => rej(new Error('timeout')), 8000));
+  try { await Promise.race([loadFromDrive(), timeoutP]); }
+  catch(e) { console.warn('Drive timeout/erreur:', e.message); toast('Drive inaccessible — données locales chargées','i'); }
+  hideLoading(); renderAll();
 }
 function handleSyncBtn() { if(driveConnected) syncAll(); else if(gClientId) requestNewToken(true); else openModal('setupModal'); }
 function setSyncStatus(state,label) {
@@ -1320,16 +1328,38 @@ function setSyncStatus(state,label) {
   if(dot){ dot.className='sb-dot'+(state==='online'?' online':state==='connecting'?' connecting':''); dot.title=state==='online'?'Drive connecté':state==='connecting'?'Connexion…':'Non connecté'; }
 }
 async function driveReq(url,opts={}) {
-  if(Date.now()>tokenExpiry-60000){ await new Promise(r=>{ const c=google.accounts.oauth2.initTokenClient({client_id:gClientId,scope:'https://www.googleapis.com/auth/drive.file',callback:(res)=>{ if(!res.error){ accessToken=res.access_token; tokenExpiry=Date.now()+(res.expires_in*1000); localStorage.setItem('fo_tok',accessToken); localStorage.setItem('fo_tok_exp',tokenExpiry); } r(); }}); c.requestAccessToken({prompt:'none'}); }); }
+  // Renouvellement token avec timeout 5s — si ça bloque, on continue avec le token actuel
+  if(Date.now()>tokenExpiry-60000){
+    await Promise.race([
+      new Promise(r=>{ const c=google.accounts.oauth2.initTokenClient({client_id:gClientId,scope:'https://www.googleapis.com/auth/drive.file',callback:(res)=>{ if(!res.error){ accessToken=res.access_token; tokenExpiry=Date.now()+(res.expires_in*1000); localStorage.setItem('fo_tok',accessToken); localStorage.setItem('fo_tok_exp',tokenExpiry); } r(); }}); c.requestAccessToken({prompt:'none'}); }),
+      new Promise(r=>setTimeout(r,5000)) // timeout 5s — ne pas bloquer
+    ]);
+  }
+  if(!accessToken) throw new Error('Pas de token disponible');
   opts.headers={...(opts.headers||{}),Authorization:'Bearer '+accessToken};
-  return fetch(url,opts);
+  const ctrl=new AbortController();
+  const tid=setTimeout(()=>ctrl.abort(),10000); // timeout requête 10s
+  try {
+    const res=await fetch(url,{...opts,signal:ctrl.signal});
+    clearTimeout(tid); return res;
+  } catch(e){ clearTimeout(tid); throw e; }
 }
 async function loadFromDrive() {
-  try {
-    if(!DATA_FILE_ID){ const r=await driveReq("https://www.googleapis.com/drive/v3/files?q=name='GED_FO_Wingles_data.json' and trashed=false&fields=files(id,name)"); const d=await r.json(); if(d.files&&d.files.length>0){ DATA_FILE_ID=d.files[0].id; localStorage.setItem('fo_data_fid',DATA_FILE_ID); } }
-    if(DATA_FILE_ID){ const r=await driveReq(`https://www.googleapis.com/drive/v3/files/${DATA_FILE_ID}?alt=media`); const data=await r.json(); docs=data.docs||[]; meetings=data.meetings||[]; fiches=data.fiches||[]; toast(`${docs.length} documents chargés`,'s'); }
-    else { docs=[]; meetings=[]; fiches=[]; await saveToDrive(); }
-  } catch(e){ docs=JSON.parse(localStorage.getItem('fo_docs')||'[]'); meetings=JSON.parse(localStorage.getItem('fo_meetings')||'[]'); fiches=JSON.parse(localStorage.getItem('fo_fiches')||'[]'); toast('Chargé depuis le cache','i'); }
+  // Lance sans try/catch — les erreurs remontent vers onDriveConnected qui gère le fallback
+  if(!DATA_FILE_ID){
+    const r=await driveReq("https://www.googleapis.com/drive/v3/files?q=name='GED_FO_Wingles_data.json' and trashed=false&fields=files(id,name)");
+    const d=await r.json();
+    if(d.files&&d.files.length>0){ DATA_FILE_ID=d.files[0].id; localStorage.setItem('fo_data_fid',DATA_FILE_ID); }
+  }
+  if(DATA_FILE_ID){
+    const r=await driveReq(`https://www.googleapis.com/drive/v3/files/${DATA_FILE_ID}?alt=media`);
+    const data=await r.json();
+    docs=data.docs||[]; meetings=data.meetings||[]; fiches=data.fiches||[];
+    toast(`${docs.length} documents chargés depuis Drive`,'s');
+  } else {
+    // Nouveau fichier Drive
+    await saveToDrive();
+  }
 }
 async function saveToDrive() {
   if(!driveConnected||!accessToken){ localStorage.setItem('fo_docs',JSON.stringify(docs)); localStorage.setItem('fo_meetings',JSON.stringify(meetings)); localStorage.setItem('fo_fiches',JSON.stringify(fiches)); return; }
@@ -1342,7 +1372,13 @@ async function saveToDrive() {
   } catch(e){ console.error(e); toast('Erreur sauvegarde Drive','e'); }
   localStorage.setItem('fo_docs',JSON.stringify(docs)); localStorage.setItem('fo_meetings',JSON.stringify(meetings)); localStorage.setItem('fo_fiches',JSON.stringify(fiches));
 }
-async function syncAll() { showLoading('Synchronisation…'); await saveToDrive(); hideLoading(); toast('Synchronisation terminée','s'); }
+async function syncAll() {
+  showLoading('Synchronisation Drive…');
+  const timeoutP = new Promise((_,rej) => setTimeout(() => rej(new Error('timeout')), 12000));
+  try { await Promise.race([saveToDrive(), timeoutP]); toast('Synchronisation terminée','s'); }
+  catch(e) { toast('Synchronisation échouée — données sauvées en local','e'); }
+  hideLoading();
+}
 async function uploadFileToDrive(fileData,fileName,instLabel) {
   if(!driveConnected||!accessToken) return null;
   try { const folderId=await ensureFolder(`GED_FO_Wingles/${instLabel}`); const arr=fileData.split(','); const mime=arr[0].match(/:(.*?);/)[1]; const bstr=atob(arr[1]); const u8=new Uint8Array(bstr.length); for(let i=0;i<bstr.length;i++) u8[i]=bstr.charCodeAt(i); const form=new FormData(); form.append('metadata',new Blob([JSON.stringify({name:fileName,parents:[folderId]})],{type:'application/json'})); form.append('file',new Blob([u8],{type:mime})); const r=await driveReq('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',body:form}); const d=await r.json(); return d.id; } catch(e){ console.error(e); return null; }
