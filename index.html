@@ -1267,7 +1267,7 @@ const FF_CATS = {
 
 let docs=[], meetings=[], fiches=[];
 let ffFileTemp=null;
-let gClientId = localStorage.getItem('fo_cid') || '321352148658-gmlhrr68ptvn4lgv21akrj8eroiirn5g.apps.googleusercontent.com';
+let gClientId = localStorage.getItem('fo_cid') || '321352148658-jpeo9mm1sjjl4hm8ck7333c1fv42hq4m.apps.googleusercontent.com';
 let accessToken=null, tokenExpiry=0, driveConnected=false;
 let DATA_FILE_ID = localStorage.getItem('fo_data_fid') || null;
 let calCurrent=new Date(), selDate=null, curFilter={};
@@ -1358,32 +1358,16 @@ function requestNewToken() {
   }).catch(() => toast('Impossible de charger Google — vérifier la connexion', 'e'));
 }
 
-// Renouvellement token en arrière-plan (pendant une opération Drive)
+// Renouvellement token — NE BLOQUE JAMAIS (prompt:none non fiable)
+// Si token expiré → invalider et demander reconnexion manuelle
 function _renewToken() {
-  return new Promise((resolve) => {
-    if (!window.google || !google.accounts || !google.accounts.oauth2) { resolve(false); return; }
-    const timer = setTimeout(() => resolve(false), 5000);
-    const client = google.accounts.oauth2.initTokenClient({
-      client_id: gClientId,
-      scope: 'https://www.googleapis.com/auth/drive.file',
-      callback: (res) => {
-        clearTimeout(timer);
-        if (!res.error) {
-          accessToken = res.access_token;
-          tokenExpiry = Date.now() + (res.expires_in * 1000);
-          localStorage.setItem('fo_tok', accessToken);
-          localStorage.setItem('fo_tok_exp', tokenExpiry);
-          resolve(true);
-        } else {
-          driveConnected = false;
-          setSyncStatus('offline', 'Session expirée — cliquer pour reconnecter');
-          showConnectBanner();
-          resolve(false);
-        }
-      }
-    });
-    client.requestAccessToken({ prompt: 'none' });
-  });
+  driveConnected = false;
+  accessToken = null;
+  localStorage.removeItem('fo_tok');
+  localStorage.removeItem('fo_tok_exp');
+  setSyncStatus('offline', 'Session expirée — cliquer pour reconnecter');
+  showConnectBanner();
+  return Promise.resolve(false);
 }
 
 function showConnectBanner() {
