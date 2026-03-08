@@ -1617,24 +1617,68 @@ function _vOpenOffice(driveId, fileName, fileData){
   const body=document.getElementById('viewerBody');
   body.classList.add('center');
   _vShowNav(false);
-  if(driveId){
-    const ext=_vGetExt(fileName);
-    let src;
-    if(['xlsx','xls','docx','doc','pptx','odt','ods','csv'].includes(ext)){
-      // Google Docs Viewer — fonctionne sur mobile/tablette pour les fichiers Office
-      src='https://docs.google.com/viewer?srcid='+driveId+'&pid=explorer&efh=false&a=v&chrome=false&embedded=true';
-    } else {
-      // Drive preview pour les autres formats
-      src='https://drive.google.com/file/d/'+driveId+'/preview';
-    }
-    const iframe=document.createElement('iframe');
-    iframe.src=src;
-    iframe.style.cssText='width:100%;height:100%;border:none;border-radius:8px;background:#fff';
+  const ext=_vGetExt(fileName);
+  const ico={'xlsx':'📊','xls':'📊','docx':'📝','doc':'📝','pptx':'📑','odt':'📝','ods':'📊','csv':'📋'}[ext]||'📄';
+  const typeLabel={'xlsx':'Excel','xls':'Excel','docx':'Word','doc':'Word','pptx':'PowerPoint','odt':'OpenDocument','ods':'Calc','csv':'CSV'}[ext]||'Office';
 
-    body.innerHTML='';
-    body.appendChild(iframe);
+  // Détection mobile/tablette
+  const isMobile=/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    || (navigator.maxTouchPoints>1 && window.innerWidth<1200);
+
+  if(driveId){
+    const urlView='https://drive.google.com/file/d/'+driveId+'/view';
+    if(isMobile){
+      // Tablette/mobile → ouvrir Drive directement dans un nouvel onglet
+      window.open(urlView,'_blank');
+      // Afficher un message informatif dans le viewer
+      body.innerHTML=`<div class="no-preview" style="gap:14px;display:flex;flex-direction:column;align-items:center;padding:40px 20px">
+        <div class="np-ico">${ico}</div>
+        <p style="color:var(--text);font-size:14px;font-weight:600;text-align:center">${fileName}</p>
+        <p style="font-size:12px;color:var(--muted);text-align:center">Ouvert dans Google Drive dans un nouvel onglet.</p>
+        <a href="${urlView}" target="_blank" rel="noopener" style="text-decoration:none;margin-top:4px">
+          <button class="btn btn-secondary" style="font-size:12px">☁ Rouvrir dans Drive</button>
+        </a>
+      </div>`;
+    } else {
+      // PC → iframe via Google Docs viewer (seule URL qui marche en iframe pour Office)
+      const iframe=document.createElement('iframe');
+      iframe.src='https://docs.google.com/viewer?srcid='+driveId+'&pid=explorer&efh=false&a=v&chrome=false&embedded=true';
+      iframe.style.cssText='width:100%;height:100%;border:none;border-radius:8px;background:#fff';
+      // Si Google Docs viewer échoue → afficher bouton Drive
+      let loaded=false;
+      iframe.onload=()=>{ loaded=true; };
+      setTimeout(()=>{
+        if(!loaded||iframe.contentDocument===null){
+          const urlView='https://drive.google.com/file/d/'+driveId+'/view';
+          body.innerHTML=`<div class="no-preview" style="gap:14px;display:flex;flex-direction:column;align-items:center;padding:40px 20px">
+            <div class="np-ico">${ico}</div>
+            <p style="color:var(--text);font-size:14px;font-weight:600">${fileName}</p>
+            <p style="font-size:12px;color:var(--muted)">L'aperçu n'est pas disponible dans le navigateur.</p>
+            <a href="${urlView}" target="_blank" rel="noopener" style="text-decoration:none;margin-top:4px">
+              <button class="btn btn-primary" style="font-size:13px;padding:10px 22px">☁ Ouvrir dans Google Drive</button>
+            </a>
+          </div>`;
+        }
+      },5000);
+      body.innerHTML='';
+      body.appendChild(iframe);
+    }
+  } else if(fileData){
+    // Pas de Drive → téléchargement direct
+    body.innerHTML=`<div class="no-preview" style="gap:14px;display:flex;flex-direction:column;align-items:center;padding:40px 20px">
+      <div class="np-ico">${ico}</div>
+      <p style="color:var(--text);font-size:14px;font-weight:600;text-align:center">${fileName}</p>
+      <p style="font-size:12px;color:var(--muted);text-align:center">Les fichiers ${typeLabel} ne peuvent pas être prévisualisés ici.<br>Téléchargez pour ouvrir avec votre application.</p>
+      <a href="${fileData}" download="${fileName}" style="text-decoration:none;margin-top:4px">
+        <button class="btn btn-primary" style="font-size:13px;padding:10px 22px">↓ Télécharger et ouvrir</button>
+      </a>
+    </div>`;
   } else {
-    body.innerHTML='<div class="no-preview"><div class="np-ico">📝</div><p style="color:var(--text)">'+fileName+'</p><p>Ce format ne peut pas être prévisualisé sans Drive.</p><p style="font-size:11px;margin-top:8px">Utilisez le bouton Télécharger.</p></div>';
+    body.innerHTML=`<div class="no-preview" style="gap:12px;display:flex;flex-direction:column;align-items:center;padding:40px 20px">
+      <div class="np-ico">${ico}</div>
+      <p style="color:var(--text);font-size:14px;font-weight:600">${fileName}</p>
+      <p style="font-size:12px;color:var(--muted)">Aucun fichier disponible.</p>
+    </div>`;
   }
 }
 
