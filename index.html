@@ -778,9 +778,9 @@ body {
 .viewer-zoom button:hover { background:rgba(255,255,255,.1); }
 .viewer-zoom span { font-family:var(--font-m);font-size:11px;color:var(--muted);min-width:38px;text-align:center; }
 /* Corps viewer */
-.viewer-body { flex:1;overflow-y:auto;overflow-x:auto;display:flex;flex-direction:column;align-items:center;padding:0 20px 20px 20px;gap:16px;background:var(--bg); }
+.viewer-body { flex:1;overflow-y:auto;overflow-x:auto;display:flex;flex-direction:column;align-items:center;padding:0 20px 20px 20px;gap:0;background:var(--bg); }
 .viewer-body.center { justify-content:center; }
-.viewer-canvas-wrap { position:relative;box-shadow:0 8px 40px rgba(0,0,0,.6);border-radius:4px;flex-shrink:0; }
+.viewer-canvas-wrap { position:relative;box-shadow:0 8px 40px rgba(0,0,0,.6);border-radius:4px;flex-shrink:0;margin-bottom:16px; }
 .viewer-canvas-wrap canvas { display:block;max-width:100%; }
 .viewer-body iframe { width:100%;height:100%;border:none;border-radius:8px;background:#fff;flex-shrink:0; }
 .viewer-body img { max-width:min(100%,900px);object-fit:contain;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.5); }
@@ -1271,7 +1271,7 @@ body {
       <button id="vNavLast" onclick="vGoPage(vTotalPages)" title="Dernière page">⏭</button>
     </div>
     <!-- Zoom PDF (masqué par défaut) -->
-    <div class="viewer-zoom" id="viewerZoom" style="display:none">
+    <div class="viewer-zoom" id="viewerZoom">
       <button onclick="vZoom(-0.2)" title="Dézoomer">−</button>
       <span id="vZoomLabel">100%</span>
       <button onclick="vZoom(0.2)" title="Zoomer">+</button>
@@ -1887,13 +1887,28 @@ function vGoPage(n){
   vCurPage=n; _vRenderAllPages();
 }
 function vZoom(delta){
-  vScale=Math.max(0.4,Math.min(3.0,vScale+delta));
-  _vRenderAllPages();
+  // PDF
+  if(vPdfDoc){ vScale=Math.max(0.4,Math.min(3.0,vScale+delta)); _vRenderAllPages(); return; }
+  // Image
+  const img=document.querySelector('#viewerBody img');
+  if(img){
+    const cur=parseFloat(img.dataset.zoom||'1');
+    const nxt=Math.max(0.3,Math.min(4.0,cur+delta));
+    img.dataset.zoom=nxt;
+    img.style.maxWidth='none';
+    img.style.width=(nxt*100)+'%';
+    document.getElementById('vZoomLabel').textContent=Math.round(nxt*100)+'%';
+  }
 }
 function vZoomFit(){
-  const body=document.getElementById('viewerBody');
-  const w=body.clientWidth-40;
-  if(vPdfDoc){ vPdfDoc.getPage(1).then(p=>{ const vp=p.getViewport({scale:1}); vScale=Math.min(w/vp.width,1.8); _vRenderAllPages(); }); }
+  if(vPdfDoc){
+    const body=document.getElementById('viewerBody');
+    const w=body.clientWidth-40;
+    vPdfDoc.getPage(1).then(p=>{ const vp=p.getViewport({scale:1}); vScale=Math.min(w/vp.width,1.8); _vRenderAllPages(); });
+    return;
+  }
+  const img=document.querySelector('#viewerBody img');
+  if(img){ img.style.maxWidth='min(100%,900px)'; img.style.width=''; img.dataset.zoom='1'; document.getElementById('vZoomLabel').textContent='100%'; }
 }
 
 // Rendu de TOUTES les pages verticalement (scroll continu)
@@ -1925,12 +1940,14 @@ async function _vRenderAllPages(){
   body.innerHTML='';
   frags.forEach(el=>body.appendChild(el));
   // Scroll : page 1 = retour en haut, autres pages = scroll vers la bonne page
-  const pages=body.querySelectorAll('.viewer-canvas-wrap');
-  if(vCurPage===1){
-    body.scrollTop=0;
-  } else if(pages[vCurPage-1]){
-    body.scrollTop=pages[vCurPage-1].offsetTop;
-  }
+  requestAnimationFrame(()=>{
+    const pages=body.querySelectorAll('.viewer-canvas-wrap');
+    if(vCurPage===1){
+      body.scrollTop=0;
+    } else if(pages[vCurPage-1]){
+      body.scrollTop=pages[vCurPage-1].offsetTop;
+    }
+  });
   _vUpdateNav();
 }
 
