@@ -867,330 +867,69 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════
-   AMBIENT LIGHT EFFECTS
+   REFINED VISUAL — Subtle depth & polish
 ═══════════════════════════════════════════════════ */
 
-/* Main content gets a relative position for light layers */
-.content { position: relative; }
-
-/* Aurora — Top glow behind topbar */
-.aurora {
-  position: fixed;
-  top: -120px; left: 272px; right: 0; height: 400px;
-  pointer-events: none; z-index: 1;
-  overflow: hidden;
-}
-.aurora::before {
+/* Background mesh — very subtle fixed gradient */
+body::before {
   content: '';
-  position: absolute;
-  width: 140%; height: 100%;
-  top: 0; left: -20%;
+  position: fixed; inset: 0;
   background:
-    radial-gradient(ellipse 600px 250px at 20% 60%, rgba(224,58,71,.12) 0%, transparent 70%),
-    radial-gradient(ellipse 500px 200px at 55% 40%, rgba(59,130,246,.08) 0%, transparent 70%),
-    radial-gradient(ellipse 400px 180px at 80% 50%, rgba(168,85,247,.07) 0%, transparent 70%);
-  animation: auroraShift 12s ease-in-out infinite alternate;
-  filter: blur(40px);
-}
-.aurora::after {
-  content: '';
-  position: absolute;
-  width: 120%; height: 100%;
-  top: 0; left: -10%;
-  background:
-    radial-gradient(ellipse 450px 200px at 35% 70%, rgba(234,179,8,.06) 0%, transparent 70%),
-    radial-gradient(ellipse 350px 150px at 70% 30%, rgba(6,182,212,.06) 0%, transparent 70%);
-  animation: auroraShift2 15s ease-in-out infinite alternate;
-  filter: blur(50px);
-}
-@keyframes auroraShift {
-  0% { transform: translateX(0) scale(1); opacity: .8; }
-  50% { transform: translateX(40px) scale(1.05); opacity: 1; }
-  100% { transform: translateX(-30px) scale(.97); opacity: .7; }
-}
-@keyframes auroraShift2 {
-  0% { transform: translateX(20px) scale(1.02); opacity: .6; }
-  50% { transform: translateX(-50px) scale(.98); opacity: .9; }
-  100% { transform: translateX(30px) scale(1.03); opacity: .5; }
+    radial-gradient(ellipse 80% 50% at 75% 10%, rgba(224,58,71,.03) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 20% 80%, rgba(59,130,246,.02) 0%, transparent 60%);
+  pointer-events: none; z-index: 0;
 }
 
-/* Floating ambient orbs */
-.light-orb {
-  position: fixed;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 0;
-  filter: blur(80px);
-  opacity: 0;
-  animation: orbFloat 20s ease-in-out infinite;
-}
-.light-orb:nth-child(1) {
-  width: 300px; height: 300px;
-  background: radial-gradient(circle, rgba(224,58,71,.15) 0%, transparent 70%);
-  top: 30%; right: 5%;
-  animation-duration: 22s;
-  animation-delay: 0s;
-}
-.light-orb:nth-child(2) {
-  width: 250px; height: 250px;
-  background: radial-gradient(circle, rgba(59,130,246,.12) 0%, transparent 70%);
-  top: 55%; left: 35%;
-  animation-duration: 18s;
-  animation-delay: -6s;
-}
-.light-orb:nth-child(3) {
-  width: 200px; height: 200px;
-  background: radial-gradient(circle, rgba(168,85,247,.1) 0%, transparent 70%);
-  top: 15%; left: 50%;
-  animation-duration: 25s;
-  animation-delay: -12s;
-}
-.light-orb:nth-child(4) {
-  width: 280px; height: 280px;
-  background: radial-gradient(circle, rgba(234,179,8,.08) 0%, transparent 70%);
-  bottom: 10%; right: 20%;
-  animation-duration: 20s;
-  animation-delay: -4s;
-}
-.light-orb:nth-child(5) {
-  width: 180px; height: 180px;
-  background: radial-gradient(circle, rgba(6,182,212,.1) 0%, transparent 70%);
-  top: 70%; left: 15%;
-  animation-duration: 24s;
-  animation-delay: -9s;
-}
-@keyframes orbFloat {
-  0% { opacity: 0; transform: translate(0, 0) scale(.8); }
-  15% { opacity: .6; }
-  50% { opacity: .8; transform: translate(40px, -30px) scale(1.1); }
-  85% { opacity: .5; }
-  100% { opacity: 0; transform: translate(-20px, 20px) scale(.85); }
-}
-
-/* Sidebar glow line — breathing light at the top */
-.sidebar::before {
+/* Topbar — clean glass separator */
+.topbar { position: relative; }
+.topbar::after {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent 0%, rgba(224,58,71,.6) 30%, rgba(59,130,246,.4) 70%, transparent 100%);
-  z-index: 10;
-  animation: sidebarGlow 4s ease-in-out infinite alternate;
+  bottom: 0; left: 36px; right: 36px; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.06) 30%, rgba(255,255,255,.06) 70%, transparent);
 }
+
+/* Sidebar — refined top accent */
+.sidebar { position: relative; }
 .sidebar::after {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0; height: 80px;
-  background: linear-gradient(180deg, rgba(224,58,71,.04) 0%, transparent 100%);
-  z-index: 0;
-  pointer-events: none;
-  animation: sidebarGlow 4s ease-in-out infinite alternate;
-}
-@keyframes sidebarGlow {
-  0% { opacity: .5; }
-  100% { opacity: 1; }
+  top: 0; left: 20%; right: 20%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(224,58,71,.3), transparent);
+  z-index: 10;
 }
 
-/* Logo mark pulse */
-.sb-logo-mark {
-  animation: logoPulse 3s ease-in-out infinite alternate;
-}
-@keyframes logoPulse {
-  0% { box-shadow: 0 4px 20px rgba(224,58,71,.35), 0 0 0 1px rgba(255,255,255,.1) inset; }
-  100% { box-shadow: 0 4px 30px rgba(224,58,71,.55), 0 0 40px rgba(224,58,71,.15), 0 0 0 1px rgba(255,255,255,.15) inset; }
+/* Card hover — clean lift with border glow */
+.stat-card { transition: all .25s ease; }
+.stat-card:hover {
+  border-color: color-mix(in srgb, var(--sc-color, var(--red)) 20%, transparent);
 }
 
-/* Stat cards — light beam on hover */
-.stat-card::before {
-  transition: opacity .4s, height .4s;
-}
-.stat-card:hover::before {
-  height: 3px; opacity: 1;
-  box-shadow: 0 0 20px var(--sc-color, var(--red)), 0 0 60px color-mix(in srgb, var(--sc-color, var(--red)) 40%, transparent);
-}
-.stat-card:hover::after {
-  opacity: .12;
-  width: 140px; height: 140px;
-  transition: all .4s;
+.inst-card { transition: all .25s ease; }
+.inst-card:hover {
+  border-color: color-mix(in srgb, var(--ic-color, var(--red)) 20%, transparent);
 }
 
-/* Instance cards — light reflection sweep */
-.inst-card {
-  overflow: hidden;
-}
-.inst-card::before {
-  transition: height .3s, box-shadow .3s;
-}
-.inst-card:hover::before {
-  box-shadow: 0 0 24px var(--ic-color, var(--red)), 0 0 80px color-mix(in srgb, var(--ic-color, var(--red)) 30%, transparent);
+/* Active nav — smooth colored indicator */
+.nav-item.active .ni-icon-wrap {
+  box-shadow: 0 0 12px color-mix(in srgb, var(--ni-color, var(--red)) 20%, transparent);
 }
 
-/* Light sweep — diagonal shine on card hover */
-.inst-card .ic-sweep {
-  position: absolute;
-  top: 0; left: -100%; width: 60%; height: 100%;
-  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.04) 45%, rgba(255,255,255,.08) 50%, rgba(255,255,255,.04) 55%, transparent 60%);
-  pointer-events: none;
-  transition: left .6s ease;
-  z-index: 2;
-}
-.inst-card:hover .ic-sweep {
-  left: 120%;
-}
-
-/* Topbar glass — enhanced glow */
-.topbar::before {
-  content: '';
-  position: absolute;
-  bottom: -1px; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(224,58,71,.2) 20%, rgba(59,130,246,.15) 50%, rgba(168,85,247,.1) 80%, transparent);
-  animation: topbarLine 6s ease-in-out infinite alternate;
-}
-@keyframes topbarLine {
-  0% { opacity: .4; transform: scaleX(.9); }
-  100% { opacity: .8; transform: scaleX(1); }
-}
-
-/* Floating particles canvas */
-#particles-canvas {
-  position: fixed;
-  top: 0; left: 272px; right: 0; bottom: 0;
-  pointer-events: none;
-  z-index: 0;
-  opacity: .6;
-}
-
-/* Noise grain overlay for texture */
-.grain-overlay {
-  position: fixed; inset: 0;
-  pointer-events: none; z-index: 999;
-  opacity: .025;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-repeat: repeat;
-  background-size: 200px;
-  mix-blend-mode: overlay;
-}
-
-/* Btn primary — glow pulse on hover */
-.btn-primary::before {
-  content: '';
-  position: absolute; inset: -2px;
-  border-radius: inherit;
-  background: var(--red-g);
-  opacity: 0;
-  filter: blur(12px);
-  transition: opacity .3s;
-  z-index: -1;
-}
-.btn-primary:hover::before { opacity: .4; }
-
-/* Sync pill — glow when online */
-.sync-pill.online::before {
-  content: '';
-  position: absolute; inset: -1px;
-  border-radius: inherit;
-  background: rgba(34,197,94,.15);
-  filter: blur(8px);
-  animation: syncGlow 2s ease-in-out infinite alternate;
-  z-index: -1;
-}
-.sync-pill { position: relative; overflow: visible; }
-@keyframes syncGlow {
-  0% { opacity: .3; }
-  100% { opacity: .7; }
-}
-
-/* Avis cards — side glow */
-.avis-card::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 10%; bottom: 10%; width: 4px;
-  background: var(--av-color, var(--red));
-  box-shadow: 0 0 12px var(--av-color, var(--red)), 0 0 30px color-mix(in srgb, var(--av-color, var(--red)) 40%, transparent);
-  border-radius: 0 4px 4px 0;
-  opacity: 0;
-  transition: opacity .3s;
-}
-.avis-card { position: relative; overflow: hidden; }
-.avis-card:hover::before { opacity: .7; }
-
-/* Meeting card glow */
-.mtg-card::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 10%; bottom: 10%; width: 3px;
-  background: var(--mc, var(--red));
-  box-shadow: 0 0 10px var(--mc, var(--red));
-  border-radius: 0 3px 3px 0;
-  opacity: 0; transition: opacity .3s;
-}
-.mtg-card { position: relative; overflow: hidden; }
-.mtg-card:hover::before { opacity: .6; }
-
-/* FF cards — stripe glow */
-.ff-card:hover .ff-card-stripe {
-  box-shadow: 0 0 16px var(--fc, var(--red)), 0 2px 40px color-mix(in srgb, var(--fc, var(--red)) 25%, transparent);
-  transition: box-shadow .3s;
-}
-
-/* Search cards side-glow */
-.scard::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 10%; bottom: 10%; width: 3px;
-  background: var(--sc, var(--red));
-  box-shadow: 0 0 10px var(--sc, var(--red));
-  border-radius: 0 3px 3px 0;
-  opacity: 0; transition: opacity .3s;
-}
-.scard { position: relative; overflow: hidden; }
-.scard:hover::before { opacity: .6; }
-
-/* Page title — text glow on em */
+/* Section titles — subtle accent glow */
 .page-title em {
-  text-shadow: 0 0 30px rgba(224,58,71,.3), 0 0 60px rgba(224,58,71,.1);
+  text-shadow: 0 0 40px rgba(224,58,71,.15);
 }
 
-/* Viewer — cinematic top light */
-.viewer-hdr::after {
-  content: '';
-  position: absolute;
-  bottom: -1px; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(224,58,71,.3) 50%, transparent);
-}
-.viewer-hdr { position: relative; }
-
-/* Modal — glow ring */
-.modal::before {
-  content: '';
-  position: absolute; inset: -1px;
-  border-radius: var(--radius-lg);
-  background: linear-gradient(135deg, rgba(224,58,71,.15), rgba(59,130,246,.1), rgba(168,85,247,.08));
-  z-index: -1;
-  filter: blur(1px);
-  opacity: .5;
-}
-.modal { position: relative; z-index: 1; }
+/* Modals — clean border */
+.modal { border: 1px solid var(--border2); }
 
 @media(max-width:900px){
-  .aurora { left: 0; }
-  #particles-canvas { left: 0; }
-  .sidebar::before, .sidebar::after { display: none; }
+  .sidebar::after { display: none; }
 }
 </style>
 </head>
 <body>
-
-<!-- Grain texture overlay -->
-<div class="grain-overlay"></div>
-
 <div class="app">
-
-<!-- Floating light orbs -->
-<div class="light-orb"></div>
-<div class="light-orb"></div>
-<div class="light-orb"></div>
-<div class="light-orb"></div>
-<div class="light-orb"></div>
 
 <!-- ══════════════ SIDEBAR ══════════════ -->
 <nav class="sidebar">
@@ -1289,7 +1028,7 @@ body {
         </div>
         <div class="nav-child" onclick="go('papripak')" data-p="papripak" style="--ni-color:#B45309">
           <div class="ni-icon-wrap"><svg viewBox="0 0 16 16"><path d="M2 3h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M5 7h6M5 10h3"/></svg></div>
-          <span class="ni-label">Commission Papripak</span>
+          <span class="ni-label">Commission Papripract</span>
           <span class="ni-badge" id="cnt-papripak">0</span>
         </div>
       </div>
@@ -1336,10 +1075,6 @@ body {
 
 <!-- ══════════════ MAIN ══════════════ -->
 <div class="content">
-
-  <!-- Ambient light effects -->
-  <div class="aurora"></div>
-  <canvas id="particles-canvas"></canvas>
 
   <div class="topbar">
     <div>
@@ -1689,7 +1424,7 @@ const INSTANCES=[
   {id:'eco',label:'Comm. Éco',sub:'Commission Économique du CSE',color:'#1F5C99'},
   {id:'egalite',label:'Égalité Pro',sub:'Égalité Professionnelle H/F',color:'#9B59B6'},
   {id:'duerp',label:'D.U.E.R.P',sub:'Document Unique d\'Évaluation des Risques Professionnels',color:'#0E6655'},
-  {id:'papripak',label:'Papripak',sub:'Commission Papripak',color:'#B45309'},
+  {id:'papripak',label:'Papripract',sub:'Commission Papripract',color:'#B45309'},
   {id:'csec',label:'CSE Central',sub:'Comité Social et Économique Central',color:'#1A3A6C'},
   {id:'cssctc',label:'CSSCT Cent.',sub:'Commission SSCT Centrale',color:'#922B21'},
   {id:'nao',label:'NAO',sub:'Négociations Annuelles Obligatoires',color:'#B45309'},
@@ -1779,7 +1514,7 @@ function renderMeetings(){const c=document.getElementById('meetingsList');let li
 function doSearch(q){const stats=document.getElementById('gsStats');const results=document.getElementById('gsResults');if(!q||q.length<2){results.innerHTML='<div style="color:var(--muted);text-align:center;padding:40px;font-size:13px;grid-column:1/-1">Tapez votre recherche…</div>';stats.textContent='';return;}const ql=q.toLowerCase();const out=[];docs.forEach(doc=>{const inst=INSTANCES.find(i=>i.id===doc.instance);const hay=[doc.title,doc.notes,CATS[doc.type]?.l,inst?.label,doc.date].filter(Boolean).join(' ').toLowerCase();if(hay.includes(ql))out.push({kind:'doc',data:doc,inst,label:doc.title,sub:`${inst?.label} · ${CATS[doc.type]?.l} · ${fmtDate(doc.date)}`,ico:CATS[doc.type]?.ico||'📄',color:inst?.color});});meetings.forEach(m=>{const inst=INSTANCES.find(i=>i.id===m.instance);const hay=[m.notes,m.location,inst?.label,m.date].filter(Boolean).join(' ').toLowerCase();if(hay.includes(ql))out.push({kind:'meeting',data:m,inst,label:`Réunion ${inst?.label||''}`,sub:`${fmtDate(m.date)}${m.duration?' · '+m.duration:''}${m.location?' · '+m.location:''}`,ico:'📅',color:inst?.color});});fiches.forEach(f=>{const cat=FF_CATS[f.categorie];const hay=[f.titre,f.code,f.service,f.coeff,f.mission,f.activites,f.formation,f.notes,...(f.skills||[])].filter(Boolean).join(' ').toLowerCase();if(hay.includes(ql))out.push({kind:'fiche',data:f,label:f.titre,sub:`${cat?.l||''} · ${f.service||''} · Coeff: ${f.coeff||'—'}`,ico:'👔',color:cat?.color});});stats.textContent=`${out.length} résultat${out.length>1?'s':''} pour "${q}"`;if(!out.length){results.innerHTML=`<div style="color:var(--muted);text-align:center;padding:40px;grid-column:1/-1">Aucun résultat pour "${q}"</div>`;return;}function hl(txt,q){if(!txt)return'';try{return txt.split(new RegExp('('+q+')','gi')).map(p=>p.toLowerCase()===ql?`<span class="hl">${p}</span>`:p).join('');}catch(e){return txt;}}results.innerHTML=out.map((r,i)=>{let clickAction='';if(r.kind==='doc')clickAction=`go('${r.data.instance}');setTimeout(()=>viewDoc('${r.data.id}'),300)`;else if(r.kind==='meeting')clickAction=`go('agenda');setTimeout(()=>{selectDay('${r.data.date}');renderMeetings()},300)`;else clickAction=`go('fonctions');setTimeout(()=>editFiche('${r.data.id}'),300)`;return`<div class="scard" style="--sc:${r.color||'var(--red)'};animation-delay:${i*.04}s" onclick="${clickAction}"><div style="display:flex;align-items:center;gap:9px;margin-bottom:5px"><span style="font-size:18px">${r.ico}</span><h4>${hl(r.label,q)}</h4><span style="font-size:9px;background:rgba(255,255,255,.07);padding:2px 6px;border-radius:4px;color:var(--muted);margin-left:auto">${r.kind==='doc'?'Document':r.kind==='meeting'?'Réunion':'Fiche'}</span></div><p>${hl(r.sub,q)}</p>${r.data.notes||r.data.mission?`<p style="margin-top:3px;font-size:10px;color:var(--muted)">${hl((r.data.notes||r.data.mission||'').substring(0,80),q)}...</p>`:''}</div>`;}).join('');}
 function renderAll(){renderStats();renderDashCards();INSTANCES.forEach(inst=>renderDocRows(inst.id,curFilter[inst.id]||'all'));renderCal();renderMeetings();document.getElementById('cnt-agenda').textContent=meetings.length;renderAvis();updateAvisCount();renderFFCatsBar();renderFiches();updateFFCount();updateNavCounts();}
 function renderStats(){const now=new Date();document.getElementById('s-total').textContent=docs.length;document.getElementById('s-synced').textContent=docs.filter(d=>d.driveId).length;document.getElementById('s-meetings').textContent=meetings.length;document.getElementById('s-month').textContent=docs.filter(d=>(now-new Date(d.createdAt))/86400000<=30).length;}
-function renderDashCards(){document.getElementById('dashCards').innerHTML=INSTANCES.map(inst=>{const d=docs.filter(x=>x.instance===inst.id);return`<div class="inst-card" style="--ic-color:${inst.color}" onclick="go('${inst.id}')"><div class="ic-sweep"></div><div class="ic-top"><div class="ic-badge">${inst.id.toUpperCase().slice(0,4)}</div><div class="ic-name">${inst.label}</div></div><div class="ic-sub">${inst.sub}</div><div class="ic-stats"><div class="ic-stat"><strong>${d.length}</strong><span>docs</span></div><div class="ic-stat"><strong>${d.filter(x=>x.type==='pv').length}</strong><span>PV</span></div><div class="ic-stat"><strong>${d.filter(x=>x.type==='oj').length}</strong><span>OJ</span></div></div></div>`;}).join('');}
+function renderDashCards(){document.getElementById('dashCards').innerHTML=INSTANCES.map(inst=>{const d=docs.filter(x=>x.instance===inst.id);return`<div class="inst-card" style="--ic-color:${inst.color}" onclick="go('${inst.id}')"><div class="ic-top"><div class="ic-badge">${inst.id.toUpperCase().slice(0,4)}</div><div class="ic-name">${inst.label}</div></div><div class="ic-sub">${inst.sub}</div><div class="ic-stats"><div class="ic-stat"><strong>${d.length}</strong><span>docs</span></div><div class="ic-stat"><strong>${d.filter(x=>x.type==='pv').length}</strong><span>PV</span></div><div class="ic-stat"><strong>${d.filter(x=>x.type==='oj').length}</strong><span>OJ</span></div></div></div>`;}).join('');}
 function renderDocRows(instId,filter,search=''){const el=document.getElementById('rows-'+instId);if(!el)return;let list=docs.filter(d=>d.instance===instId);if(filter&&filter!=='all')list=list.filter(d=>d.type===filter);if(search)list=list.filter(d=>d.title.toLowerCase().includes(search.toLowerCase())||(d.notes||'').toLowerCase().includes(search.toLowerCase()));list.sort((a,b)=>new Date(b.date)-new Date(a.date));if(!list.length){el.innerHTML=`<div style="padding:36px;text-align:center;color:var(--muted);font-size:12.5px">Aucun document${filter!=='all'?' dans cette catégorie':''}<br><span style="font-size:11px">Glissez un fichier ou cliquez ＋ Document</span></div>`;return;}const inst=INSTANCES.find(x=>x.id===instId);el.innerHTML=list.map((doc,i)=>{const cat=CATS[doc.type]||CATS.div;return`<div class="doc-row" style="animation-delay:${i*.04}s"><div class="doc-row-name"><div class="doc-ico" style="background:${inst.color}18;color:${inst.color}">${cat.ico}</div><div class="doc-name"><strong>${doc.title}</strong><span>${genCode(doc)}</span></div></div><div><span class="tag ${cat.cls}">${cat.l}</span></div><div class="doc-date">${fmtDate(doc.date)}</div><div class="doc-acts"><button class="ibtn view" title="Visualiser" onclick="viewDoc('${doc.id}')">👁</button>${doc.driveId?`<button class="ibtn drive" title="Drive" onclick="window.open('https://drive.google.com/file/d/${doc.driveId}/view','_blank')">☁</button>`:''}<button class="ibtn" title="Télécharger" onclick="downloadDoc('${doc.id}')">↓</button><button class="ibtn del" title="Supprimer" onclick="deleteDoc('${doc.id}','${instId}','${filter}')">✕</button></div></div>`;}).join('');const cnt=document.getElementById('cnt-'+instId);if(cnt)cnt.textContent=docs.filter(d=>d.instance===instId).length;}
 function updateNavCounts(){INSTANCES.forEach(inst=>{const el=document.getElementById('cnt-'+inst.id);if(el)el.textContent=docs.filter(d=>d.instance===inst.id).length;});}
 function buildInstPanels(){document.getElementById('instPanels').innerHTML=INSTANCES.map(inst=>`<div class="panel" id="panel-${inst.id}" style="--ic-color:${inst.color}"><div class="inst-header"><div class="ih-badge">${inst.id.toUpperCase()}</div><div class="ih-info"><h3>${inst.label}</h3><p>${inst.sub} · 2025–2026</p></div><div style="margin-left:auto;display:flex;gap:8px"><button class="btn btn-primary" onclick="openModal('newDocModal');document.getElementById('dInstance').value='${inst.id}'">＋ Ajouter</button></div></div><div class="doc-tabs" id="tabs-${inst.id}"><button class="dtab active" onclick="filterTab('${inst.id}','all',this)">Tous</button><button class="dtab" onclick="filterTab('${inst.id}','ref',this)">Référence</button><button class="dtab" onclick="filterTab('${inst.id}','conv',this)">Convocations</button><button class="dtab" onclick="filterTab('${inst.id}','oj',this)">OJ</button><button class="dtab" onclick="filterTab('${inst.id}','pv',this)">PV</button><button class="dtab" onclick="filterTab('${inst.id}','dir',this)">Direction</button><button class="dtab" onclick="filterTab('${inst.id}','fo',this)">FO</button><button class="dtab" onclick="filterTab('${inst.id}','suivi',this)">Suivi</button><button class="dtab" onclick="filterTab('${inst.id}','div',this)">Divers</button></div><div class="toolbar"><div class="sbox"><svg class="sbox-ico" viewBox="0 0 16 16"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg><input type="text" placeholder="Rechercher…" oninput="renderDocRows('${inst.id}',curFilter['${inst.id}']||'all',this.value)"></div><button class="btn btn-secondary" onclick="sortInst('${inst.id}')">↕ Date</button></div><div class="doc-table"><div class="doc-thead"><span>Document</span><span>Type</span><span>Date</span><span style="text-align:right">Actions</span></div><div id="rows-${inst.id}"></div></div><div class="drop-zone" id="drop-${inst.id}" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="handleDrop(event,'${inst.id}')" onclick="document.getElementById('fi-${inst.id}').click()"><div style="font-size:24px;margin-bottom:6px">☁️</div><strong>Glissez un fichier ici</strong><p>ou cliquez pour parcourir · PDF, Word, Excel, images</p><input type="file" id="fi-${inst.id}" style="display:none" multiple onchange="handleFileInput(event,'${inst.id}')"></div></div>`).join('');}
@@ -1789,7 +1524,7 @@ let sortAsc={};
 function sortInst(instId){sortAsc[instId]=!sortAsc[instId];const instDocs=docs.filter(d=>d.instance===instId);docs=docs.filter(d=>d.instance!==instId);instDocs.sort((a,b)=>sortAsc[instId]?new Date(a.date)-new Date(b.date):new Date(b.date)-new Date(a.date));docs=[...docs,...instDocs];renderDocRows(instId,curFilter[instId]||'all');}
 function toggleSbGroup(id){const grp=document.getElementById(id);const trigger=grp?grp.querySelector('.nav-group-trigger'):null;const body=document.getElementById(id+'-body');if(!trigger||!body)return;const isOpen=trigger.classList.contains('open');if(isOpen){trigger.classList.remove('open');body.classList.remove('open');body.style.maxHeight='0';}else{trigger.classList.add('open');body.classList.add('open');body.style.maxHeight=body.scrollHeight+'px';}}
 function toggleGroup(id){toggleSbGroup(id);}
-const PAGE_TITLES={dashboard:'Tableau de bord',agenda:'Agenda',avis:'Avis CSE',fonctions:'Fiches de fonctions',search:'Recherche globale',cse:'CSE',cssct:'CSSCT',formation:'Commission Formation',eco:'Commission Économique',egalite:'Égalité Professionnelle',duerp:'Commission D.U.E.R.P',papripak:'Commission Papripak',csec:'CSE Central',cssctc:'CSSCT Centrale',nao:'NAO',negociation:'Négociation Entreprise'};
+const PAGE_TITLES={dashboard:'Tableau de bord',agenda:'Agenda',avis:'Avis CSE',fonctions:'Fiches de fonctions',search:'Recherche globale',cse:'CSE',cssct:'CSSCT',formation:'Commission Formation',eco:'Commission Économique',egalite:'Égalité Professionnelle',duerp:'Commission D.U.E.R.P',papripak:'Commission Papripract',csec:'CSE Central',cssctc:'CSSCT Centrale',nao:'NAO',negociation:'Négociation Entreprise'};
 function go(id){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('[data-p]').forEach(n=>n.classList.remove('active'));const panel=document.getElementById('panel-'+id);if(panel)panel.classList.add('active');const nav=document.querySelector(`[data-p="${id}"]`);if(nav)nav.classList.add('active');if(nav&&(nav.classList.contains('nav-child'))){const body=nav.closest('.nav-group-body');const grpId=body?body.id.replace('-body',''):null;if(grpId&&body&&!body.classList.contains('open'))toggleSbGroup(grpId);}const tb=document.getElementById('topbarTitle');if(tb)tb.textContent=PAGE_TITLES[id]||id;if(id==='agenda'){renderCal();renderMeetings();}else if(id==='search'){setTimeout(()=>document.getElementById('gsInput').focus(),100);}else if(id==='dashboard'){renderStats();renderDashCards();}else if(id==='avis'){renderAvis();}else if(id==='fonctions'){renderFFCatsBar();renderFiches();}else renderDocRows(id,curFilter[id]||'all');}
 function openModal(id){if(id==='meetingModal'){const sel=document.getElementById('mDocs');if(sel)sel.innerHTML=docs.map(d=>{const inst=INSTANCES.find(i=>i.id===d.instance);return`<option value="${d.id}">${inst?inst.label:''} · ${d.title} (${fmtDate(d.date)})</option>`;}).join('');}const el=document.getElementById(id);if(el)el.classList.add('open');}
 function closeModal(id){const el=document.getElementById(id);if(el)el.classList.remove('open');}
@@ -1801,93 +1536,6 @@ function toast(msg,type='i'){const c=document.getElementById('toasts');const el=
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('.modal-ov.open').forEach(m=>m.classList.remove('open'));closeViewer();}});
 document.querySelectorAll('.modal-ov').forEach(ov=>{ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('open');});});
 window.handleSyncBtn=handleSyncBtn;window.go=go;window.openModal=openModal;window.closeModal=closeModal;window.saveDoc=saveDoc;window.saveMeeting=saveMeeting;window.deleteMeeting=deleteMeeting;window.deleteDoc=deleteDoc;window.viewDoc=viewDoc;window.downloadDoc=downloadDoc;window.closeViewer=closeViewer;window.syncAll=syncAll;window.filterTab=filterTab;window.sortInst=sortInst;window.renderDocRows=renderDocRows;window.renderMeetings=renderMeetings;window.handleDrop=handleDrop;window.handleFileInput=handleFileInput;window.calMove=calMove;window.selectDay=selectDay;window.doSearch=doSearch;window.saveAndConnect=saveAndConnect;window.saveFiche=saveFiche;window.deleteFiche=deleteFiche;window.editFiche=editFiche;window.setFFCat=setFFCat;window.filterFiches=filterFiches;window.removeSkillTag=removeSkillTag;window.resetFFForm=resetFFForm;window.toggleGroup=toggleGroup;window.toggleSbGroup=toggleSbGroup;window.handleFFFile=handleFFFile;window.clearFFFile=clearFFFile;window.viewFFFile=viewFFFile;window.saveAvis=saveAvis;window.editAvis=editAvis;window.deleteAvis=deleteAvis;window.viewAvisFile=viewAvisFile;window.filterAvis=filterAvis;window.handleAvisFile=handleAvisFile;window.clearAvisFile=clearAvisFile;window.resetAvisForm=resetAvisForm;window.vGoPage=vGoPage;window.vZoom=vZoom;window.vZoomFit=vZoomFit;window.showConnectBanner=showConnectBanner;window.hideConnectBanner=hideConnectBanner;window.requestNewToken=requestNewToken;
-// ─── FLOATING LIGHT PARTICLES ─────────────────────────────────────────────────
-(function(){
-  const canvas=document.getElementById('particles-canvas');
-  if(!canvas) return;
-  const ctx=canvas.getContext('2d');
-  let W,H,particles=[];
-  const COLORS=['rgba(224,58,71,','rgba(59,130,246,','rgba(168,85,247,','rgba(234,179,8,','rgba(6,182,212,','rgba(255,255,255,'];
-  const COUNT=35;
-
-  function resize(){
-    W=canvas.width=canvas.offsetWidth;
-    H=canvas.height=canvas.offsetHeight;
-  }
-
-  function createParticle(){
-    const c=COLORS[Math.floor(Math.random()*COLORS.length)];
-    return {
-      x:Math.random()*W,
-      y:Math.random()*H,
-      r:Math.random()*2+0.5,
-      dx:(Math.random()-.5)*.15,
-      dy:(Math.random()-.5)-.08,
-      alpha:0,
-      maxAlpha:Math.random()*.4+.1,
-      phase:Math.random()*Math.PI*2,
-      speed:Math.random()*.005+.002,
-      color:c,
-      life:0,
-      maxLife:Math.random()*600+300
-    };
-  }
-
-  function initParticles(){
-    particles=[];
-    for(let i=0;i<COUNT;i++){
-      const p=createParticle();
-      p.life=Math.random()*p.maxLife;
-      particles.push(p);
-    }
-  }
-
-  function drawParticle(p){
-    // Glow
-    const grad=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*6);
-    grad.addColorStop(0, p.color+p.alpha+')');
-    grad.addColorStop(.4, p.color+(p.alpha*.3)+')');
-    grad.addColorStop(1, p.color+'0)');
-    ctx.beginPath();
-    ctx.arc(p.x,p.y,p.r*6,0,Math.PI*2);
-    ctx.fillStyle=grad;
-    ctx.fill();
-    // Core
-    ctx.beginPath();
-    ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-    ctx.fillStyle=p.color+p.alpha+')';
-    ctx.fill();
-  }
-
-  function update(){
-    ctx.clearRect(0,0,W,H);
-    particles.forEach((p,i)=>{
-      p.life++;
-      p.phase+=p.speed;
-      // Fade in/out
-      const progress=p.life/p.maxLife;
-      if(progress<.15) p.alpha=p.maxAlpha*(progress/.15);
-      else if(progress>.8) p.alpha=p.maxAlpha*(1-(progress-.8)/.2);
-      else p.alpha=p.maxAlpha;
-      // Shimmer
-      p.alpha*=(.7+.3*Math.sin(p.phase));
-      p.x+=p.dx+Math.sin(p.phase)*.12;
-      p.y+=p.dy;
-      drawParticle(p);
-      // Recycle
-      if(p.life>=p.maxLife||p.y<-20||p.y>H+20||p.x<-20||p.x>W+20){
-        particles[i]=createParticle();
-      }
-    });
-    requestAnimationFrame(update);
-  }
-
-  window.addEventListener('resize',()=>{resize();});
-  resize();
-  initParticles();
-  update();
-})();
-
 init();
 </script>
 
